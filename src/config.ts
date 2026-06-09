@@ -1,4 +1,5 @@
-export type Endpoint = 'faviconV2' | 's2';
+export const ENDPOINTS = ['faviconV2', 's2'] as const;
+export type Endpoint = (typeof ENDPOINTS)[number];
 
 export interface DomainConfig {
   /** Bare apex host, e.g. 'rewind.rest'. */
@@ -16,8 +17,6 @@ export const DOMAINS: DomainConfig[] = [
 ];
 
 export const SIZES = [16, 32, 48, 64, 96, 128, 256] as const;
-
-export const ENDPOINTS: Endpoint[] = ['faviconV2', 's2'];
 
 export const CONCURRENCY = 8;
 export const FETCH_TIMEOUT_MS = 10000;
