@@ -58,3 +58,63 @@ export function sniffFormat(bytes: Uint8Array): ImageFormat {
   }
   return 'unknown';
 }
+
+export interface Rgba {
+  width: number;
+  height: number;
+  /** RGBA, 4 bytes per pixel, row-major. */
+  data: Uint8Array;
+}
+
+const ALPHA_OPAQUE_MIN = 16;
+const DARK_MAX = 16;
+const LIGHT_MIN = 240;
+
+function cornerPixel(
+  img: Rgba,
+  x: number,
+  y: number
+): [number, number, number, number] {
+  const i = (y * img.width + x) * 4;
+  return [img.data[i], img.data[i + 1], img.data[i + 2], img.data[i + 3]];
+}
+
+export function classifyCorners(img: Rgba): CornerClass {
+  const pts: [number, number][] = [
+    [0, 0],
+    [img.width - 1, 0],
+    [0, img.height - 1],
+    [img.width - 1, img.height - 1],
+  ];
+  const corners = pts.map(([x, y]) => cornerPixel(img, x, y));
+  const maxAlpha = Math.max(...corners.map((c) => c[3]));
+  if (maxAlpha < ALPHA_OPAQUE_MIN) return 'TRANSPARENT';
+
+  const opaque = corners.filter((c) => c[3] >= ALPHA_OPAQUE_MIN);
+  const allDark = opaque.every(
+    (c) => c[0] <= DARK_MAX && c[1] <= DARK_MAX && c[2] <= DARK_MAX
+  );
+  if (allDark) return 'OPAQUE-BLACK';
+
+  const allLight = opaque.every(
+    (c) => c[0] >= LIGHT_MIN && c[1] >= LIGHT_MIN && c[2] >= LIGHT_MIN
+  );
+  if (allLight) return 'OPAQUE-WHITE';
+
+  const [r, g, b] = opaque[0];
+  const hex =
+    '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+  return `OPAQUE-OTHER(${hex})`;
+}
+
+export function verdictFor(
+  format: ImageFormat,
+  cornerClass: CornerClass,
+  expected?: 'transparent' | 'opaque'
+): Verdict {
+  if (format === 'jpeg') {
+    if (cornerClass === 'OPAQUE-BLACK' && expected !== 'opaque') return 'ALERT';
+    return 'WARN';
+  }
+  return 'OK';
+}
