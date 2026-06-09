@@ -1,3 +1,6 @@
+import { decode as decodePng } from 'fast-png';
+import * as jpeg from 'jpeg-js';
+
 export type ImageFormat = 'png' | 'jpeg' | 'ico' | 'svg' | 'unknown';
 
 export type CornerClass =
@@ -117,4 +120,88 @@ export function verdictFor(
     return 'WARN';
   }
   return 'OK';
+}
+
+/**
+ * Decode PNG/JPEG bytes to a uniform 8-bit RGBA buffer. Assumes 8-bit PNG
+ * depth (true for favicons). Returns null for formats we do not decode
+ * (ico, svg, unknown).
+ */
+export function decodeToRgba(
+  bytes: Uint8Array,
+  format: ImageFormat
+): (Rgba & { hasAlpha: boolean }) | null {
+  if (format === 'png') {
+    const img = decodePng(bytes);
+    const { width, height, channels } = img;
+    const src = img.data as Uint8Array;
+    const out = new Uint8Array(width * height * 4);
+    for (let p = 0; p < width * height; p++) {
+      let r: number;
+      let g: number;
+      let b: number;
+      let a: number;
+      if (channels === 4) {
+        r = src[p * 4];
+        g = src[p * 4 + 1];
+        b = src[p * 4 + 2];
+        a = src[p * 4 + 3];
+      } else if (channels === 3) {
+        r = src[p * 3];
+        g = src[p * 3 + 1];
+        b = src[p * 3 + 2];
+        a = 255;
+      } else if (channels === 2) {
+        r = g = b = src[p * 2];
+        a = src[p * 2 + 1];
+      } else {
+        r = g = b = src[p];
+        a = 255;
+      }
+      out[p * 4] = r;
+      out[p * 4 + 1] = g;
+      out[p * 4 + 2] = b;
+      out[p * 4 + 3] = a;
+    }
+    return {
+      width,
+      height,
+      data: out,
+      hasAlpha: channels === 4 || channels === 2,
+    };
+  }
+  if (format === 'jpeg') {
+    const img = jpeg.decode(bytes, { useTArray: true });
+    return {
+      width: img.width,
+      height: img.height,
+      data: img.data as unknown as Uint8Array,
+      hasAlpha: false,
+    };
+  }
+  return null;
+}
+
+export function analyzeImage(
+  bytes: Uint8Array,
+  opts: { expected?: 'transparent' | 'opaque' } = {}
+): Analysis {
+  const format = sniffFormat(bytes);
+  let width: number | undefined;
+  let height: number | undefined;
+  let hasAlpha: boolean | undefined;
+  let cornerClass: CornerClass = 'UNDECODED';
+  try {
+    const img = decodeToRgba(bytes, format);
+    if (img) {
+      width = img.width;
+      height = img.height;
+      hasAlpha = img.hasAlpha;
+      cornerClass = classifyCorners(img);
+    }
+  } catch {
+    cornerClass = 'UNDECODED';
+  }
+  const verdict = verdictFor(format, cornerClass, opts.expected);
+  return { format, width, height, hasAlpha, cornerClass, verdict };
 }
