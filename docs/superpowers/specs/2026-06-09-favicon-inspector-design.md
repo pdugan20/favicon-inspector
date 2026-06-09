@@ -56,10 +56,13 @@ optionally declare `expected: 'transparent' | 'opaque'` to tune the verdict.
 ## Architecture
 
 Standalone Node + TypeScript CLI, its own repo. No server, no deployment.
-Image decoding via `sharp` (native module — noted as an install prerequisite in
-the README). `sharp` reliably decodes the PNG/JPEG that Google returns; ICO and
-SVG origin assets are reported by status/content-type and a lightweight
-alpha-sniff rather than full decode.
+Image decoding via **pure-JS `fast-png` + `jpeg-js`** — matching the rewind
+stack, no native compile step, clean CI. `fast-png` decodes PNG to raw RGBA
+(with alpha); `jpeg-js` decodes JPEG to raw RGBA. Those two cover every format
+Google returns. ICO and SVG origin assets are reported by status/content-type
+and a lightweight alpha-sniff rather than full decode (they are informational,
+not the focus). Format is sniffed from magic bytes before decode, so an
+unexpected type is classified rather than crashing the decoder.
 
 ### The probe matrix
 
@@ -82,7 +85,8 @@ checks each. Concurrency-limited fetch; completes in seconds.
 
 ### Per-cell analysis
 
-For each fetched image:
+For each fetched image, after sniffing format from magic bytes and decoding
+PNG via `fast-png` / JPEG via `jpeg-js`:
 
 - HTTP status and `content-type`
 - **format** sniffed from magic bytes (PNG / JPEG / ICO / SVG) — the JPEG tell
@@ -138,16 +142,74 @@ favicon-inspector/
     config.ts      # domains[] + optional expected per domain; sizes; endpoints
     endpoints.ts   # builds faviconV2 / s2 URLs from (domain, size)
     fetch.ts       # concurrency-limited fetcher, returns {status, contentType, bytes}
-    analyze.ts     # sharp decode -> {format, dims, hasAlpha, cornerClass, verdict}
+    analyze.ts     # fast-png/jpeg-js decode -> {format, dims, hasAlpha, cornerClass, verdict}
     origin.ts      # origin asset + homepage <link> + manifest probing
     report.ts      # HTML + JSON emitters (snapshot and diff)
     compare.ts     # snapshot diffing
     index.ts       # CLI entry / arg parsing
+  src/__tests__/   # vitest unit tests + image fixtures
   reports/         # gitignored output
-  package.json
+  .github/
+    workflows/{ci.yml, pr-lint.yml}
+    dependabot.yml
+  .husky/{pre-commit, pre-push}
+  eslint.config.ts
+  .prettierrc, .prettierignore
   tsconfig.json
-  README.md        # usage; notes sharp native-module prerequisite
+  vitest.config.ts
+  .editorconfig, .nvmrc, .gitignore
+  package.json
+  CLAUDE.md        # brief project instructions
+  README.md        # usage + conventions
 ```
+
+## Tooling & scaffolding
+
+Mirrors the rewind repo's conventions, adapted from a Cloudflare Worker to a
+plain Node CLI (so wrangler / Drizzle / OpenAPI / workers-types are dropped).
+
+- **Node**: `.nvmrc` = `22`. ESM (`"type": "module"`).
+- **TypeScript**: strict `tsconfig.json` matching rewind
+  (`strict`, `noUnusedLocals`, `noUnusedParameters`,
+  `noFallthroughCasesInSwitch`, `isolatedModules`, `resolveJsonModule`),
+  retargeted with `types: ["node"]`, no jsx/hono/workers-types. Run via `tsx`;
+  `build` is `tsc` to `dist/`.
+- **ESLint**: flat `eslint.config.ts` = `@eslint/js` recommended +
+  `typescript-eslint` recommended + `eslint-config-prettier`, plus the
+  `no-unused-vars` rule with `^_` ignore pattern. (No drizzle plugin.)
+- **Prettier**: `.prettierrc` identical to rewind (semi, `es5` trailing comma,
+  single quotes, printWidth 80, tabWidth 2, lf). `.prettierignore` adds
+  `reports/`.
+- **EditorConfig**: identical to rewind.
+- **Husky + lint-staged**: `pre-commit` runs `lint-staged`
+  (eslint --fix + prettier on staged JS/TS; prettier on json/md/yml);
+  `pre-push` runs `type-check && lint && test`. `prepare: husky`.
+- **npm scripts**: `dev` (tsx watch), `start` (tsx src/index.ts), `build`
+  (tsc), `lint`, `lint:fix`, `format`, `format:check`, `type-check`, `test`,
+  `test:watch`, `lint:deps` (knip, informational).
+- **CI** (`.github/workflows/ci.yml`): jobs `lint`
+  (eslint + `format:check` + `type-check`), `test` (vitest), `build` (tsc),
+  `security` (`npm audit --audit-level=moderate --omit=dev`,
+  `continue-on-error`), `dependency-review` (PRs only). Same
+  `actions/checkout@v6` + `actions/setup-node@v6` Node 22 + npm-cache pattern.
+  `concurrency` cancel-in-progress as in rewind.
+- **PR title lint** (`.github/workflows/pr-lint.yml`): verbatim from rewind
+  (`amannn/action-semantic-pull-request@v6`, lowercase subject).
+- **Dependabot** (`.github/dependabot.yml`): npm + github-actions, weekly
+  Monday; `eslint` and `vitest` groups (cloudflare/drizzle groups dropped).
+- **Vitest**: plain `vitest.config.ts` (not the workers pool); Node
+  environment; tests in `src/__tests__/`.
+
+### Deliberately omitted
+
+- **release-please** — rewind uses it for versioned npm publishing of
+  `mcp-server`; favicon-inspector is a personal, unpublished tool, so release
+  automation is out of scope for v1. Trivial to add later if it is ever
+  published.
+- **claude-code-lint CI gate** — a brief `CLAUDE.md` is included for context,
+  but the `lint:claude` CI step is omitted since the repo carries no
+  `.claude/` automation to validate.
+- Cloudflare/Drizzle/OpenAPI/Mintlify tooling — not applicable to a CLI.
 
 ## Testing
 
@@ -162,7 +224,7 @@ favicon-inspector/
 
 - A failed fetch (timeout, non-200) is recorded as a cell with its status and no
   image; it does not abort the run.
-- An image `sharp` cannot decode (e.g. multi-image ICO) is recorded with format
-  sniffed from magic bytes and `cornerClass: 'UNDECODED'`, verdict `OK` (not an
-  alert) — origin ICOs are informational.
+- An image the decoders do not handle (e.g. multi-image ICO, SVG) is recorded
+  with format sniffed from magic bytes and `cornerClass: 'UNDECODED'`, verdict
+  `OK` (not an alert) — origin ICOs/SVGs are informational.
 - Concurrency is bounded so a slow domain cannot stall the whole run.
