@@ -13,8 +13,6 @@ Inspect what Google's favicon services serve and cache for a set of domains, and
 npm install
 ```
 
-Requires Node 22 (`nvm use`).
-
 ## Usage
 
 ```bash
