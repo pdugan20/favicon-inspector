@@ -105,7 +105,18 @@ async function main(): Promise<void> {
     const stamp = after.capturedAt.replace(/[:.]/g, '-');
     const diffPath = `reports/diff-${stamp}.html`;
     writeFileSync(diffPath, renderDiffHtml(diffs, after.capturedAt));
-    console.log(`[INFO] ${diffs.length} cell(s) changed. Diff: ${diffPath}`);
+    const diffJsonPath = `reports/diff-${stamp}.json`;
+    writeFileSync(
+      diffJsonPath,
+      JSON.stringify(
+        { comparedAt: after.capturedAt, changed: diffs.length, diffs },
+        null,
+        2
+      )
+    );
+    console.log(
+      `[INFO] ${diffs.length} cell(s) changed. Diff: ${diffPath} | ${diffJsonPath}`
+    );
     for (const d of diffs) {
       console.log(
         `[DIFF] ${d.key}: ${d.before.format}/${d.before.cornerClass}/${d.before.verdict} -> ${d.after.format}/${d.after.cornerClass}/${d.after.verdict}`
