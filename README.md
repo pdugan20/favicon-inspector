@@ -5,7 +5,7 @@
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?logo=opensourceinitiative&logoColor=white)](https://opensource.org/licenses/MIT)
 
-Inspect what Google's favicon services serve and cache for a set of domains. Claude and other clients resolve connector icons through Google's favicon service, which can flatten a transparent icon onto black and re-encode it as a JPEG at certain sizes — surfacing as a black square. This probes every Google endpoint and size for each domain (plus the domain's own favicon assets), decodes each image with pure-JS `fast-png` / `jpeg-js`, and flags the ones that are wrong.
+Inspect what Google's favicon services serve and cache for a set of domains, and flag the icons that come back wrong.
 
 ## Install
 
@@ -23,7 +23,7 @@ npm start -- --compare reports/<older>.json     # capture fresh, diff vs older
 npm start -- --compare <a>.json <b>.json        # diff two snapshots offline
 ```
 
-`npm start` writes a self-contained `reports/report-<timestamp>.html` — icons on a checkerboard so transparency is obvious — plus a JSON sibling. Each cell shows the icon Google returns with its format, transparency, background, and a verdict: `OK`, `WARN`, or `ALERT`, where `ALERT` is the black-JPEG failure. Compare mode diffs two snapshots and reports only the cells that changed, so you can catch the moment a cache refresh lands.
+`npm start` writes a timestamped HTML report and JSON sibling to `reports/`, grading each icon `OK` / `WARN` / `ALERT`. Compare mode diffs two snapshots and reports only the cells that changed.
 
 ## Configuration
 
