@@ -135,7 +135,24 @@ export function decodeToRgba(
     const img = decodePng(bytes);
     const { width, height, channels } = img;
     const src = img.data as Uint8Array;
+    const palette = (img as { palette?: number[][] }).palette;
     const out = new Uint8Array(width * height * 4);
+
+    // Indexed-color PNG: `src` holds palette indices, not colors. Map each
+    // index through the palette (entries are [r,g,b] or [r,g,b,a]). Without
+    // this, a transparent palette entry at index 0 reads as opaque black.
+    if (palette) {
+      const hasAlpha = palette.some((e) => e.length > 3 && e[3] < 255);
+      for (let p = 0; p < width * height; p++) {
+        const entry = palette[src[p]] ?? [0, 0, 0, 0];
+        out[p * 4] = entry[0];
+        out[p * 4 + 1] = entry[1];
+        out[p * 4 + 2] = entry[2];
+        out[p * 4 + 3] = entry.length > 3 ? entry[3] : 255;
+      }
+      return { width, height, data: out, hasAlpha };
+    }
+
     for (let p = 0; p < width * height; p++) {
       let r: number;
       let g: number;
