@@ -12,17 +12,17 @@
 
 ## File Structure
 
-| File | Responsibility |
-|------|----------------|
-| `src/config.ts` | Domains list (+ optional `expected`), sizes, endpoints, concurrency/timeout constants, shared `Endpoint`/`DomainConfig` types |
-| `src/endpoints.ts` | Build Google `faviconV2` / `s2` URLs from `(endpoint, domain, size)` |
-| `src/analyze.ts` | `sniffFormat`, `decodeToRgba`, `classifyCorners`, `verdictFor`, `analyzeImage`; owns `ImageFormat`/`CornerClass`/`Verdict`/`Analysis` types |
-| `src/fetch.ts` | `mapWithConcurrency`, `fetchImage`; owns `FetchResult` type |
-| `src/origin.ts` | `extractIconLinks`, `extractManifestHref`, `probeOrigin`; owns `OriginAsset` type |
-| `src/report.ts` | `toDataUri`, `renderHtml`, `toJson`, `writeReports`; owns `Cell`/`Snapshot` types |
-| `src/compare.ts` | `cellKey`, `diffSnapshots`, `renderDiffHtml`; owns `CellDiff` type |
-| `src/index.ts` | CLI arg parsing, `captureSnapshot` orchestration, wiring capture/compare to report output |
-| `src/__tests__/*.test.ts` | Vitest unit tests per module |
+| File                      | Responsibility                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/config.ts`           | Domains list (+ optional `expected`), sizes, endpoints, concurrency/timeout constants, shared `Endpoint`/`DomainConfig` types               |
+| `src/endpoints.ts`        | Build Google `faviconV2` / `s2` URLs from `(endpoint, domain, size)`                                                                        |
+| `src/analyze.ts`          | `sniffFormat`, `decodeToRgba`, `classifyCorners`, `verdictFor`, `analyzeImage`; owns `ImageFormat`/`CornerClass`/`Verdict`/`Analysis` types |
+| `src/fetch.ts`            | `mapWithConcurrency`, `fetchImage`; owns `FetchResult` type                                                                                 |
+| `src/origin.ts`           | `extractIconLinks`, `extractManifestHref`, `probeOrigin`; owns `OriginAsset` type                                                           |
+| `src/report.ts`           | `toDataUri`, `renderHtml`, `toJson`, `writeReports`; owns `Cell`/`Snapshot` types                                                           |
+| `src/compare.ts`          | `cellKey`, `diffSnapshots`, `renderDiffHtml`; owns `CellDiff` type                                                                          |
+| `src/index.ts`            | CLI arg parsing, `captureSnapshot` orchestration, wiring capture/compare to report output                                                   |
+| `src/__tests__/*.test.ts` | Vitest unit tests per module                                                                                                                |
 
 Plus scaffolding: `package.json`, `tsconfig.json`, `eslint.config.ts`, `vitest.config.ts`, `.prettierrc`, `.prettierignore`, `.editorconfig`, `.nvmrc`, `.gitignore`, `.husky/{pre-commit,pre-push}`, `.github/workflows/{ci.yml,pr-lint.yml}`, `.github/dependabot.yml`, `CLAUDE.md`, `README.md`.
 
@@ -31,6 +31,7 @@ Plus scaffolding: `package.json`, `tsconfig.json`, `eslint.config.ts`, `vitest.c
 ## Task 1: Scaffolding & tooling
 
 **Files:**
+
 - Create: `package.json`, `tsconfig.json`, `eslint.config.ts`, `vitest.config.ts`, `.prettierrc`, `.prettierignore`, `.editorconfig`, `.nvmrc`, `.gitignore`, `.husky/pre-commit`, `.husky/pre-push`, `.github/workflows/ci.yml`, `.github/workflows/pr-lint.yml`, `.github/dependabot.yml`, `CLAUDE.md`, `README.md`
 
 - [ ] **Step 1: Create `package.json`**
@@ -380,7 +381,7 @@ updates:
 
 - [ ] **Step 10: Create `CLAUDE.md`**
 
-```markdown
+````markdown
 # favicon-inspector
 
 A standalone Node + TypeScript CLI that inspects what Google's favicon services
@@ -407,13 +408,15 @@ npm start -- --compare <old>.json <new>.json  # diff two files, no fetching
 npm test                                   # vitest
 npm run lint && npm run type-check         # checks
 ```
+````
 
 ## Conventions
 
 - No emojis in logging or output. Plain `[INFO]` / `[ERROR]` prefixes.
 - Never rely on visual judgment of an icon; classify by decoded pixels.
 - Domains live in `src/config.ts`.
-```
+
+````
 
 - [ ] **Step 11: Create `README.md`**
 
@@ -430,7 +433,7 @@ Inspect what Google's favicon services serve and cache for a set of domains.
 
 ```bash
 npm install
-```
+````
 
 ## Usage
 
@@ -451,7 +454,8 @@ onto a black background.
 Edit `src/config.ts` to change the domain list, sizes, or per-domain
 `expected: 'transparent' | 'opaque'` (suppresses black-background alerts for
 domains whose icon is legitimately an opaque tile).
-```
+
+````
 
 - [ ] **Step 12: Install and verify tooling**
 
@@ -464,7 +468,7 @@ npm install
 npx husky init >/dev/null 2>&1 || true
 chmod +x .husky/pre-commit .husky/pre-push
 npm run format:check || npm run format
-```
+````
 
 Expected: `npm install` succeeds; Prettier check passes (or `format` rewrites files).
 
@@ -480,6 +484,7 @@ git commit -m "chore: scaffold favicon-inspector tooling and CI"
 ## Task 2: Config and endpoint URL building
 
 **Files:**
+
 - Create: `src/config.ts`
 - Create: `src/endpoints.ts`
 - Test: `src/__tests__/endpoints.test.ts`
@@ -576,6 +581,7 @@ git commit -m "feat: add config and Google favicon URL builders"
 ## Task 3: Format sniffing
 
 **Files:**
+
 - Create: `src/analyze.ts` (first slice: types + `sniffFormat`)
 - Test: `src/__tests__/analyze.sniff.test.ts`
 
@@ -589,7 +595,9 @@ import { sniffFormat } from '../analyze';
 
 describe('sniffFormat', () => {
   it('detects PNG by signature', () => {
-    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
+    const png = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0,
+    ]);
     expect(sniffFormat(png)).toBe('png');
   });
 
@@ -604,7 +612,9 @@ describe('sniffFormat', () => {
   });
 
   it('detects SVG by markup', () => {
-    const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    const svg = new TextEncoder().encode(
+      '<svg xmlns="http://www.w3.org/2000/svg"></svg>'
+    );
     expect(sniffFormat(svg)).toBe('svg');
   });
 
@@ -673,10 +683,11 @@ export function sniffFormat(bytes: Uint8Array): ImageFormat {
   ) {
     return 'ico';
   }
-  const head = new TextDecoder()
-    .decode(bytes.slice(0, 256))
-    .toLowerCase();
-  if (head.includes('<svg') || (head.includes('<?xml') && head.includes('svg'))) {
+  const head = new TextDecoder().decode(bytes.slice(0, 256)).toLowerCase();
+  if (
+    head.includes('<svg') ||
+    (head.includes('<?xml') && head.includes('svg'))
+  ) {
     return 'svg';
   }
   return 'unknown';
@@ -700,6 +711,7 @@ git commit -m "feat: add image format sniffing by magic bytes"
 ## Task 4: Corner classification and verdict
 
 **Files:**
+
 - Modify: `src/analyze.ts` (add `Rgba`, `classifyCorners`, `verdictFor`)
 - Test: `src/__tests__/analyze.classify.test.ts`
 
@@ -817,8 +829,7 @@ export function classifyCorners(img: Rgba): CornerClass {
 
   const [r, g, b] = opaque[0];
   const hex =
-    '#' +
-    [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+    '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
   return `OPAQUE-OTHER(${hex})`;
 }
 
@@ -852,6 +863,7 @@ git commit -m "feat: add corner classification and verdict logic"
 ## Task 5: Decode + end-to-end analyzeImage
 
 **Files:**
+
 - Modify: `src/analyze.ts` (add `decodeToRgba`, `analyzeImage`)
 - Test: `src/__tests__/analyze.image.test.ts`
 
@@ -881,7 +893,12 @@ function rgbaImage(r: number, g: number, b: number, a: number) {
 describe('analyzeImage', () => {
   it('classifies a transparent PNG', () => {
     const img = rgbaImage(0, 0, 0, 0);
-    const bytes = encodePng({ width: img.width, height: img.height, data: img.data, channels: 4 });
+    const bytes = encodePng({
+      width: img.width,
+      height: img.height,
+      data: img.data,
+      channels: 4,
+    });
     const a = analyzeImage(new Uint8Array(bytes));
     expect(a.format).toBe('png');
     expect(a.hasAlpha).toBe(true);
@@ -891,7 +908,10 @@ describe('analyzeImage', () => {
 
   it('classifies an opaque black JPEG as ALERT', () => {
     const img = rgbaImage(0, 0, 0, 255);
-    const encoded = jpeg.encode({ width: img.width, height: img.height, data: Buffer.from(img.data) }, 90);
+    const encoded = jpeg.encode(
+      { width: img.width, height: img.height, data: Buffer.from(img.data) },
+      90
+    );
     const a = analyzeImage(new Uint8Array(encoded.data));
     expect(a.format).toBe('jpeg');
     expect(a.cornerClass).toBe('OPAQUE-BLACK');
@@ -1026,6 +1046,7 @@ git commit -m "feat: add image decoding and analyzeImage"
 ## Task 6: Concurrency-limited fetch
 
 **Files:**
+
 - Create: `src/fetch.ts`
 - Test: `src/__tests__/fetch.test.ts`
 
@@ -1143,6 +1164,7 @@ git commit -m "feat: add concurrency-limited fetch layer"
 ## Task 7: Origin probing
 
 **Files:**
+
 - Create: `src/origin.ts`
 - Test: `src/__tests__/origin.test.ts`
 
@@ -1257,7 +1279,10 @@ export async function probeOrigin(domain: string): Promise<OriginAsset[]> {
     const res = await fetch(base, { redirect: 'follow' });
     const html = await res.text();
     for (const link of extractIconLinks(html)) {
-      targets.push({ url: new URL(link.href, base).toString(), source: 'html-link' });
+      targets.push({
+        url: new URL(link.href, base).toString(),
+        source: 'html-link',
+      });
     }
     const manifestHref = extractManifestHref(html);
     if (manifestHref) {
@@ -1315,6 +1340,7 @@ git commit -m "feat: add origin favicon probing"
 ## Task 8: Report types, serialization, and rendering
 
 **Files:**
+
 - Create: `src/report.ts`
 - Test: `src/__tests__/report.test.ts`
 
@@ -1418,7 +1444,10 @@ export interface Snapshot {
   origins: Record<string, OriginAsset[]>;
 }
 
-export function toDataUri(contentType: string | null, bytes: Uint8Array): string {
+export function toDataUri(
+  contentType: string | null,
+  bytes: Uint8Array
+): string {
   const b64 = Buffer.from(bytes).toString('base64');
   return `data:${contentType ?? 'application/octet-stream'};base64,${b64}`;
 }
@@ -1439,10 +1468,7 @@ const VERDICT_COLOR: Record<Verdict, string> = {
 };
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function cellHtml(cell: Cell): string {
@@ -1496,9 +1522,7 @@ function matrixTables(cells: Cell[]): string {
         .map((size) => {
           const cell = cells.find(
             (c) =>
-              c.domain === domain &&
-              c.endpoint === endpoint &&
-              c.size === size
+              c.domain === domain && c.endpoint === endpoint && c.size === size
           );
           const body = cell
             ? cellHtml(cell)
@@ -1591,6 +1615,7 @@ git commit -m "feat: add report serialization and HTML rendering"
 ## Task 9: Snapshot diffing (compare mode)
 
 **Files:**
+
 - Create: `src/compare.ts`
 - Test: `src/__tests__/compare.test.ts`
 
@@ -1603,7 +1628,11 @@ import { describe, it, expect } from 'vitest';
 import { cellKey, diffSnapshots } from '../compare';
 import type { Snapshot } from '../report';
 
-function snap(verdict: 'ALERT' | 'OK', format: 'jpeg' | 'png', corner: string): Snapshot {
+function snap(
+  verdict: 'ALERT' | 'OK',
+  format: 'jpeg' | 'png',
+  corner: string
+): Snapshot {
   return {
     capturedAt: '2026-06-09T12:00:00.000Z',
     cells: [
@@ -1748,6 +1777,7 @@ git commit -m "feat: add snapshot diffing for compare mode"
 ## Task 10: CLI orchestration and live run
 
 **Files:**
+
 - Create: `src/index.ts`
 
 - [ ] **Step 1: Create `src/index.ts`**
@@ -1765,12 +1795,7 @@ import { buildGoogleUrl } from './endpoints';
 import { analyzeImage } from './analyze';
 import { fetchImage, mapWithConcurrency } from './fetch';
 import { probeOrigin, type OriginAsset } from './origin';
-import {
-  toDataUri,
-  writeReports,
-  type Cell,
-  type Snapshot,
-} from './report';
+import { toDataUri, writeReports, type Cell, type Snapshot } from './report';
 import { diffSnapshots, renderDiffHtml } from './compare';
 
 interface Job {
@@ -1850,7 +1875,9 @@ async function main(): Promise<void> {
   if (compareIdx !== -1) {
     const rest = args.slice(compareIdx + 1).filter((a) => !a.startsWith('--'));
     if (rest.length === 0) {
-      console.error('[ERROR] --compare requires at least one snapshot JSON path');
+      console.error(
+        '[ERROR] --compare requires at least one snapshot JSON path'
+      );
       process.exit(1);
     }
     const before = loadSnapshot(rest[0]);
