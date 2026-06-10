@@ -1,4 +1,4 @@
-import type { Endpoint } from './config';
+import type { Endpoint } from './config.js';
 
 export function buildGoogleUrl(
   endpoint: Endpoint,

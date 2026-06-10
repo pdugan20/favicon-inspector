@@ -25,6 +25,8 @@ jobs:
         run: npm run lint
       - name: Prettier
         run: npm run format:check
+      - name: Markdown lint
+        run: npm run lint:md
       - name: Type check
         run: npm run type-check
       - name: Check unused dependencies

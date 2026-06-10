@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { Buffer } from 'node:buffer';
-import type { Endpoint } from './config';
-import type { Analysis, Verdict } from './analyze';
-import type { OriginAsset } from './origin';
+import type { Endpoint } from './config.js';
+import type { Analysis, Verdict } from './analyze.js';
+import type { OriginAsset } from './origin.js';
 
 export interface Cell {
   domain: string;

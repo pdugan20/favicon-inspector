@@ -1,6 +1,6 @@
-import { CONCURRENCY } from './config';
-import { fetchImage, mapWithConcurrency } from './fetch';
-import { analyzeImage, type Analysis, type CornerClass } from './analyze';
+import { CONCURRENCY } from './config.js';
+import { fetchImage, mapWithConcurrency } from './fetch.js';
+import { analyzeImage, type Analysis, type CornerClass } from './analyze.js';
 
 export interface OriginAsset {
   path: string;

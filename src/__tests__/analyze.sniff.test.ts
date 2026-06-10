@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sniffFormat } from '../analyze';
+import { sniffFormat } from '../analyze.js';
 
 describe('sniffFormat', () => {
   it('detects PNG by signature', () => {

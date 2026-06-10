@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractIconLinks, extractManifestHref } from '../origin';
+import { extractIconLinks, extractManifestHref } from '../origin.js';
 
 const html = `
 <html><head>
