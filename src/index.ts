@@ -16,6 +16,7 @@ import { diffSnapshots, renderDiffHtml } from './compare.js';
 import {
   parseArgs,
   meetsFailThreshold,
+  resolveSnapshotPath,
   getVersion,
   CliError,
   USAGE,
@@ -83,7 +84,16 @@ async function captureSnapshot(domains: DomainConfig[]): Promise<Snapshot> {
 }
 
 function loadSnapshot(path: string): Snapshot {
-  return JSON.parse(readFileSync(path, 'utf8')) as Snapshot;
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')) as Snapshot;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new CliError(
+        `snapshot not found: ${path} (capture one first to create it)`
+      );
+    }
+    throw e;
+  }
 }
 
 function summarize(snapshot: Snapshot): void {
@@ -109,7 +119,9 @@ function applyFailOn(snapshot: Snapshot, options: CliOptions): void {
 }
 
 async function runCompare(options: CliOptions): Promise<void> {
-  const paths = options.compare as string[];
+  const paths = (options.compare as string[]).map((p) =>
+    resolveSnapshotPath(p, options.outDir)
+  );
   const before = loadSnapshot(paths[0]);
   const after = paths[1]
     ? loadSnapshot(paths[1])
@@ -152,16 +164,7 @@ async function runCapture(options: CliOptions): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  let options: CliOptions;
-  try {
-    options = parseArgs(process.argv.slice(2));
-  } catch (e) {
-    if (e instanceof CliError) {
-      console.error(`[ERROR] ${e.message}`);
-      process.exit(1);
-    }
-    throw e;
-  }
+  const options = parseArgs(process.argv.slice(2));
 
   if (options.help) {
     console.log(USAGE);
@@ -179,7 +182,11 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((e) => {
-  console.error('[ERROR]', e);
+main().catch((e: unknown) => {
+  if (e instanceof CliError) {
+    console.error(`[ERROR] ${e.message}`);
+  } else {
+    console.error('[ERROR]', e);
+  }
   process.exit(1);
 });
