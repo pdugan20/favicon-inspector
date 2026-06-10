@@ -1,8 +1,6 @@
 name: Favicon Monitor
 
 on:
-  schedule:
-    - cron: '17 15 * * *'
   workflow_dispatch:
 
 permissions:
