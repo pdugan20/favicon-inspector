@@ -1,12 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import {
-  DOMAINS,
-  SIZES,
-  ENDPOINTS,
-  CONCURRENCY,
-  type DomainConfig,
-} from './config.js';
+import { SIZES, ENDPOINTS, CONCURRENCY, type DomainConfig } from './config.js';
+import { loadDomains } from './domains.js';
 import { buildGoogleUrl } from './endpoints.js';
 import { analyzeImage } from './analyze.js';
 import { fetchImage, mapWithConcurrency } from './fetch.js';
@@ -27,13 +22,6 @@ interface Job {
   domain: DomainConfig;
   endpoint: (typeof ENDPOINTS)[number];
   size: number;
-}
-
-function resolveDomains(requested: string[] | null): DomainConfig[] {
-  if (!requested) return DOMAINS;
-  return requested.map(
-    (name) => DOMAINS.find((d) => d.domain === name) ?? { domain: name }
-  );
 }
 
 async function captureSnapshot(domains: DomainConfig[]): Promise<Snapshot> {
@@ -125,7 +113,7 @@ async function runCompare(options: CliOptions): Promise<void> {
   const before = loadSnapshot(paths[0]);
   const after = paths[1]
     ? loadSnapshot(paths[1])
-    : await captureSnapshot(resolveDomains(options.domains));
+    : await captureSnapshot(loadDomains(options.domains));
   if (!paths[1]) {
     writeReports(after, options.outDir);
   }
@@ -155,7 +143,7 @@ async function runCompare(options: CliOptions): Promise<void> {
 }
 
 async function runCapture(options: CliOptions): Promise<void> {
-  const snapshot = await captureSnapshot(resolveDomains(options.domains));
+  const snapshot = await captureSnapshot(loadDomains(options.domains));
   const { htmlPath, jsonPath } = writeReports(snapshot, options.outDir);
   summarize(snapshot);
   console.log(`[INFO] Report: ${htmlPath}`);

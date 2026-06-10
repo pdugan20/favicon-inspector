@@ -26,7 +26,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:md": "markdownlint-cli2 '**/*.md' '#node_modules' '#reports'",
