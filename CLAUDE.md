@@ -38,6 +38,7 @@ output dir, and `.github/workflows/favicon-monitor.yml` runs a
 
 - No emojis in logging or output. Plain `[INFO]` / `[ERROR]` prefixes.
 - Never rely on visual judgment of an icon; classify by decoded pixels.
-- Domains live in `src/config.ts`.
+- Domains live in `favicon-inspector.config.json` (`--domains` overrides);
+  sizes, endpoints, and fetch limits live in `src/config.ts`.
 - Relative imports use explicit `.js` extensions (NodeNext ESM) so the
   compiled `dist/` runs under plain Node.

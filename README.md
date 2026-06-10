@@ -35,16 +35,23 @@ Options:
                              fresh snapshot first. 'latest' is shorthand for
                              the latest.json pointer in the output dir.
   --domains <list>           Comma-separated domains to inspect instead of the
-                             list in src/config.ts, e.g. a.com,b.com.
+                             config file, e.g. a.com,b.com.
   --fail-on <level>          'warn' or 'alert'. Exit 2 if any cell is at or
                              above this verdict. For CI and cron monitoring.
   --out <dir>                Output directory (default: reports).
   -h, --help                 Show this help.
   -v, --version              Show version.
 
+Configuration:
+  Without --domains, domains come from favicon-inspector.config.json in the
+  working directory:
+    {"domains": ["a.com", {"domain": "b.com", "expected": "opaque"}]}
+  Set expected to 'opaque' for domains whose icon is legitimately a solid
+  tile; it suppresses black-background alerts.
+
 Exit codes:
   0  success
-  1  fatal error (bad flags, unreadable snapshot, crash)
+  1  fatal error (bad flags, missing domains, unreadable snapshot, crash)
   2  --fail-on threshold met
 ```
 
@@ -54,4 +61,4 @@ Exit codes:
 
 ## Configuration
 
-Edit `src/config.ts` to change the domain list, sizes, or per-domain `expected: 'transparent' | 'opaque'` (suppresses black-background alerts for domains whose icon is legitimately an opaque tile).
+The domain list lives in `favicon-inspector.config.json` (shape shown in the help text above). Sizes, endpoints, and fetch limits live in `src/config.ts`.
