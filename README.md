@@ -24,13 +24,13 @@ npm start -- --help                  # all flags
 
 Every run writes `report-<timestamp>.html` and `.json` to `reports/`, updates the `latest.html` / `latest.json` pointers, and grades each icon `OK` / `WARN` / `ALERT`. Compare mode reports only the cells whose verdict changed; pass two paths to diff saved snapshots without fetching.
 
-| Flag                                   | Effect                                                                          |
-| -------------------------------------- | ------------------------------------------------------------------------------- |
-| `--compare <before.json> [after.json]` | Diff snapshots. One path captures fresh first; `latest` means the previous run. |
-| `--domains <a.com,b.com>`              | Inspect these domains instead of the configured list.                           |
-| `--fail-on <warn\|alert>`              | Exit with code 2 if any cell is at or above this verdict.                       |
-| `--out <dir>`                          | Output directory (default `reports`).                                           |
-| `-h, --help` / `-v, --version`         | Help and version.                                                               |
+| Flag                          | Effect                                                                                 |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| `--compare <file> [<file>]`   | Diff snapshot JSONs. One path captures fresh first; `latest` means the previous run.   |
+| `--domains <list>`            | Comma-separated domains to inspect instead of the configured list, e.g. `a.com,b.com`. |
+| `--fail-on <level>`           | `warn` or `alert`. Exit with code 2 if any cell is at or above this verdict.           |
+| `--out <dir>`                 | Output directory (default `reports`).                                                  |
+| `-h, --help`, `-v, --version` | Help and version.                                                                      |
 
 Installed as a package (`npm install -g .`, or `npx favicon-inspector` once published), the same flags work directly: `favicon-inspector --fail-on alert`.
 
