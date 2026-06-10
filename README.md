@@ -19,9 +19,29 @@ npm install
 npm start                                       # capture snapshot -> reports/
 npm start -- --compare reports/<older>.json     # capture fresh, diff vs older
 npm start -- --compare <a>.json <b>.json        # diff two snapshots offline
+npm start -- --help                             # full flag reference
 ```
 
 `npm start` writes a timestamped HTML report and JSON sibling to `reports/`, grading each icon `OK` / `WARN` / `ALERT`. Compare mode diffs two snapshots and reports only the cells that changed.
+
+### Flags
+
+| Flag                                   | Effect                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| `--compare <before.json> [after.json]` | Diff snapshots. With one path, captures a fresh snapshot first.                 |
+| `--domains <a.com,b.com>`              | Inspect these domains instead of the configured list.                           |
+| `--fail-on <warn\|alert>`              | Exit with code 2 if any cell is at or above this verdict. For CI/cron canaries. |
+| `--out <dir>`                          | Output directory (default `reports`).                                           |
+| `-h, --help` / `-v, --version`         | Help and version.                                                               |
+
+### As a binary
+
+`npm run build` compiles to `dist/`, and the package exposes a `favicon-inspector` bin:
+
+```bash
+npm run build
+node dist/index.js --domains example.com --fail-on alert
+```
 
 ## Configuration
 

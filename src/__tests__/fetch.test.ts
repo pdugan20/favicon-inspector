@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapWithConcurrency } from '../fetch';
+import { mapWithConcurrency } from '../fetch.js';
 
 describe('mapWithConcurrency', () => {
   it('preserves input order in the results', async () => {

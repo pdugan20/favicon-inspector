@@ -1,6 +1,6 @@
-import type { Endpoint } from './config';
-import type { Analysis } from './analyze';
-import type { Snapshot } from './report';
+import type { Endpoint } from './config.js';
+import type { Analysis } from './analyze.js';
+import type { Snapshot } from './report.js';
 
 type DiffFields = Pick<Analysis, 'format' | 'cornerClass' | 'verdict'>;
 

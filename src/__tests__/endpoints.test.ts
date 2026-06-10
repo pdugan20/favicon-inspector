@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildGoogleUrl } from '../endpoints';
+import { buildGoogleUrl } from '../endpoints.js';
 
 describe('buildGoogleUrl', () => {
   it('builds a faviconV2 URL with https-prefixed domain and size', () => {

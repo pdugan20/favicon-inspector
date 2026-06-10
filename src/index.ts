@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import {
   DOMAINS,
@@ -5,13 +6,21 @@ import {
   ENDPOINTS,
   CONCURRENCY,
   type DomainConfig,
-} from './config';
-import { buildGoogleUrl } from './endpoints';
-import { analyzeImage } from './analyze';
-import { fetchImage, mapWithConcurrency } from './fetch';
-import { probeOrigin, type OriginAsset } from './origin';
-import { toDataUri, writeReports, type Cell, type Snapshot } from './report';
-import { diffSnapshots, renderDiffHtml } from './compare';
+} from './config.js';
+import { buildGoogleUrl } from './endpoints.js';
+import { analyzeImage } from './analyze.js';
+import { fetchImage, mapWithConcurrency } from './fetch.js';
+import { probeOrigin, type OriginAsset } from './origin.js';
+import { toDataUri, writeReports, type Cell, type Snapshot } from './report.js';
+import { diffSnapshots, renderDiffHtml } from './compare.js';
+import {
+  parseArgs,
+  meetsFailThreshold,
+  getVersion,
+  CliError,
+  USAGE,
+  type CliOptions,
+} from './cli.js';
 
 interface Job {
   domain: DomainConfig;
@@ -19,11 +28,18 @@ interface Job {
   size: number;
 }
 
-async function captureSnapshot(): Promise<Snapshot> {
+function resolveDomains(requested: string[] | null): DomainConfig[] {
+  if (!requested) return DOMAINS;
+  return requested.map(
+    (name) => DOMAINS.find((d) => d.domain === name) ?? { domain: name }
+  );
+}
+
+async function captureSnapshot(domains: DomainConfig[]): Promise<Snapshot> {
   const capturedAt = new Date().toISOString();
 
   const jobs: Job[] = [];
-  for (const domain of DOMAINS) {
+  for (const domain of domains) {
     for (const endpoint of ENDPOINTS) {
       for (const size of SIZES) {
         jobs.push({ domain, endpoint, size });
@@ -32,7 +48,7 @@ async function captureSnapshot(): Promise<Snapshot> {
   }
 
   console.log(
-    `[INFO] Fetching ${jobs.length} Google favicon cells across ${DOMAINS.length} domains`
+    `[INFO] Fetching ${jobs.length} Google favicon cells across ${domains.length} domains`
   );
   const cells = await mapWithConcurrency(jobs, CONCURRENCY, async (job) => {
     const url = buildGoogleUrl(job.endpoint, job.domain.domain, job.size);
@@ -59,7 +75,7 @@ async function captureSnapshot(): Promise<Snapshot> {
 
   console.log('[INFO] Probing origin assets');
   const origins: Record<string, OriginAsset[]> = {};
-  await mapWithConcurrency(DOMAINS, CONCURRENCY, async (d) => {
+  await mapWithConcurrency(domains, CONCURRENCY, async (d) => {
     origins[d.domain] = await probeOrigin(d.domain);
   });
 
@@ -83,53 +99,84 @@ function summarize(snapshot: Snapshot): void {
   }
 }
 
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const compareIdx = args.indexOf('--compare');
-
-  if (compareIdx !== -1) {
-    const rest = args.slice(compareIdx + 1).filter((a) => !a.startsWith('--'));
-    if (rest.length === 0) {
-      console.error(
-        '[ERROR] --compare requires at least one snapshot JSON path'
-      );
-      process.exit(1);
-    }
-    const before = loadSnapshot(rest[0]);
-    const after = rest[1] ? loadSnapshot(rest[1]) : await captureSnapshot();
-    if (!rest[1]) {
-      writeReports(after);
-    }
-    const diffs = diffSnapshots(before, after);
-    mkdirSync('reports', { recursive: true });
-    const stamp = after.capturedAt.replace(/[:.]/g, '-');
-    const diffPath = `reports/diff-${stamp}.html`;
-    writeFileSync(diffPath, renderDiffHtml(diffs, after.capturedAt));
-    const diffJsonPath = `reports/diff-${stamp}.json`;
-    writeFileSync(
-      diffJsonPath,
-      JSON.stringify(
-        { comparedAt: after.capturedAt, changed: diffs.length, diffs },
-        null,
-        2
-      )
-    );
-    console.log(
-      `[INFO] ${diffs.length} cell(s) changed. Diff: ${diffPath} | ${diffJsonPath}`
-    );
-    for (const d of diffs) {
-      console.log(
-        `[DIFF] ${d.key}: ${d.before.format}/${d.before.cornerClass}/${d.before.verdict} -> ${d.after.format}/${d.after.cornerClass}/${d.after.verdict}`
-      );
-    }
-    return;
+function applyFailOn(snapshot: Snapshot, options: CliOptions): void {
+  if (!options.failOn) return;
+  const verdicts = snapshot.cells.map((c) => c.analysis.verdict);
+  if (meetsFailThreshold(verdicts, options.failOn)) {
+    console.error(`[ERROR] --fail-on ${options.failOn} threshold met`);
+    process.exit(2);
   }
+}
 
-  const snapshot = await captureSnapshot();
-  const { htmlPath, jsonPath } = writeReports(snapshot);
+async function runCompare(options: CliOptions): Promise<void> {
+  const paths = options.compare as string[];
+  const before = loadSnapshot(paths[0]);
+  const after = paths[1]
+    ? loadSnapshot(paths[1])
+    : await captureSnapshot(resolveDomains(options.domains));
+  if (!paths[1]) {
+    writeReports(after, options.outDir);
+  }
+  const diffs = diffSnapshots(before, after);
+  mkdirSync(options.outDir, { recursive: true });
+  const stamp = after.capturedAt.replace(/[:.]/g, '-');
+  const diffPath = `${options.outDir}/diff-${stamp}.html`;
+  writeFileSync(diffPath, renderDiffHtml(diffs, after.capturedAt));
+  const diffJsonPath = `${options.outDir}/diff-${stamp}.json`;
+  writeFileSync(
+    diffJsonPath,
+    JSON.stringify(
+      { comparedAt: after.capturedAt, changed: diffs.length, diffs },
+      null,
+      2
+    )
+  );
+  console.log(
+    `[INFO] ${diffs.length} cell(s) changed. Diff: ${diffPath} | ${diffJsonPath}`
+  );
+  for (const d of diffs) {
+    console.log(
+      `[DIFF] ${d.key}: ${d.before.format}/${d.before.cornerClass}/${d.before.verdict} -> ${d.after.format}/${d.after.cornerClass}/${d.after.verdict}`
+    );
+  }
+  applyFailOn(after, options);
+}
+
+async function runCapture(options: CliOptions): Promise<void> {
+  const snapshot = await captureSnapshot(resolveDomains(options.domains));
+  const { htmlPath, jsonPath } = writeReports(snapshot, options.outDir);
   summarize(snapshot);
   console.log(`[INFO] Report: ${htmlPath}`);
   console.log(`[INFO] JSON:   ${jsonPath}`);
+  applyFailOn(snapshot, options);
+}
+
+async function main(): Promise<void> {
+  let options: CliOptions;
+  try {
+    options = parseArgs(process.argv.slice(2));
+  } catch (e) {
+    if (e instanceof CliError) {
+      console.error(`[ERROR] ${e.message}`);
+      process.exit(1);
+    }
+    throw e;
+  }
+
+  if (options.help) {
+    console.log(USAGE);
+    return;
+  }
+  if (options.version) {
+    console.log(getVersion());
+    return;
+  }
+
+  if (options.compare) {
+    await runCompare(options);
+  } else {
+    await runCapture(options);
+  }
 }
 
 main().catch((e) => {

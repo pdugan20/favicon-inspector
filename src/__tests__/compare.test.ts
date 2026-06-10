@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { cellKey, diffSnapshots } from '../compare';
-import type { Snapshot } from '../report';
+import { cellKey, diffSnapshots } from '../compare.js';
+import type { Snapshot } from '../report.js';
 
 function snap(
   verdict: 'ALERT' | 'OK',

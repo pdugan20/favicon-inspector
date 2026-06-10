@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { encode as encodePng } from 'fast-png';
 import * as jpeg from 'jpeg-js';
-import { analyzeImage } from '../analyze';
+import { analyzeImage } from '../analyze.js';
 
 function rgbaImage(r: number, g: number, b: number, a: number) {
   const width = 8;

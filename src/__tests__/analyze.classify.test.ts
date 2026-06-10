@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyCorners, verdictFor, type Rgba } from '../analyze';
+import { classifyCorners, verdictFor, type Rgba } from '../analyze.js';
 
 function solid(r: number, g: number, b: number, a: number): Rgba {
   const w = 4;

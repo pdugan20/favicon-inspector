@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Buffer } from 'node:buffer';
-import { analyzeImage } from '../analyze';
+import { analyzeImage } from '../analyze.js';
 
 // A 4x4 indexed-color (palette) PNG where every pixel uses palette index 0,
 // and index 0 is transparent via a tRNS chunk. fast-png decodes this as

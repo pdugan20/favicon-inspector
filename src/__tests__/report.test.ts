@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toDataUri, toJson, renderHtml, type Snapshot } from '../report';
+import { toDataUri, toJson, renderHtml, type Snapshot } from '../report.js';
 
 const snapshot: Snapshot = {
   capturedAt: '2026-06-09T12:00:00.000Z',
