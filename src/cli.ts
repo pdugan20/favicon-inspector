@@ -22,17 +22,16 @@ Captures what Google's favicon services serve for the configured domains and
 writes an HTML + JSON report. With --compare, diffs snapshots instead.
 
 Options:
-  --compare <before.json> [after.json]  Diff against a prior snapshot. With one
-                                        path, captures a fresh snapshot first.
-                                        'latest' is shorthand for the
-                                        latest.json pointer in the output dir.
-  --domains <a.com,b.com>               Inspect these domains instead of the
-                                        list in src/config.ts.
-  --fail-on <warn|alert>                Exit 2 if any cell is at or above this
-                                        verdict. For CI and cron monitoring.
-  --out <dir>                           Output directory (default: reports).
-  -h, --help                            Show this help.
-  -v, --version                         Show version.
+  --compare <file> [<file>]  Diff snapshot JSONs. With one path, captures a
+                             fresh snapshot first. 'latest' is shorthand for
+                             the latest.json pointer in the output dir.
+  --domains <list>           Comma-separated domains to inspect instead of the
+                             list in src/config.ts, e.g. a.com,b.com.
+  --fail-on <level>          'warn' or 'alert'. Exit 2 if any cell is at or
+                             above this verdict. For CI and cron monitoring.
+  --out <dir>                Output directory (default: reports).
+  -h, --help                 Show this help.
+  -v, --version              Show version.
 
 Exit codes:
   0  success
