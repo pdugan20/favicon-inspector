@@ -10,7 +10,8 @@ Inspect what Google's favicon services serve and cache for a set of domains, and
 ## Install
 
 ```bash
-npm install
+npm install        # run from the repo via npm start
+npm install -g .   # expose the favicon-inspector bin
 ```
 
 ## Usage
@@ -19,20 +20,33 @@ npm install
 npm start                            # capture a snapshot
 npm start -- --compare latest        # capture, then diff against the previous run
 npm start -- --fail-on alert         # exit 2 if any icon alerts (for CI/cron)
-npm start -- --help                  # all flags
 ```
 
-Every run writes `report-<timestamp>.html` and `.json` to `reports/`, updates the `latest.html` / `latest.json` pointers, and grades each icon `OK` / `WARN` / `ALERT`. Compare mode reports only the cells whose verdict changed; pass two paths to diff saved snapshots without fetching.
+Each run writes a timestamped HTML report and JSON sibling to the output directory, updates the `latest.html` / `latest.json` pointers, and grades every icon OK / WARN / ALERT. Compare mode reports only the cells whose verdict changed.
 
-| Flag                          | Effect                                                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `--compare <file> [<file>]`   | Diff snapshot JSONs. One path captures fresh first; `latest` means the previous run.   |
-| `--domains <list>`            | Comma-separated domains to inspect instead of the configured list, e.g. `a.com,b.com`. |
-| `--fail-on <level>`           | `warn` or `alert`. Exit with code 2 if any cell is at or above this verdict.           |
-| `--out <dir>`                 | Output directory (default `reports`).                                                  |
-| `-h, --help`, `-v, --version` | Help and version.                                                                      |
+```text
+Usage: favicon-inspector [options]
 
-Installed as a package (`npm install -g .`, or `npx favicon-inspector` once published), the same flags work directly: `favicon-inspector --fail-on alert`.
+Captures what Google's favicon services serve for the configured domains and
+writes an HTML + JSON report. With --compare, diffs snapshots instead.
+
+Options:
+  --compare <file> [<file>]  Diff snapshot JSONs. With one path, captures a
+                             fresh snapshot first. 'latest' is shorthand for
+                             the latest.json pointer in the output dir.
+  --domains <list>           Comma-separated domains to inspect instead of the
+                             list in src/config.ts, e.g. a.com,b.com.
+  --fail-on <level>          'warn' or 'alert'. Exit 2 if any cell is at or
+                             above this verdict. For CI and cron monitoring.
+  --out <dir>                Output directory (default: reports).
+  -h, --help                 Show this help.
+  -v, --version              Show version.
+
+Exit codes:
+  0  success
+  1  fatal error (bad flags, unreadable snapshot, crash)
+  2  --fail-on threshold met
+```
 
 ## Monitoring
 
