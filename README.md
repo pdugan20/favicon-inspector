@@ -16,32 +16,27 @@ npm install
 ## Usage
 
 ```bash
-npm start                                       # capture snapshot -> reports/
-npm start -- --compare reports/<older>.json     # capture fresh, diff vs older
-npm start -- --compare <a>.json <b>.json        # diff two snapshots offline
-npm start -- --help                             # full flag reference
+npm start                            # capture a snapshot
+npm start -- --compare latest        # capture, then diff against the previous run
+npm start -- --fail-on alert         # exit 2 if any icon alerts (for CI/cron)
+npm start -- --help                  # all flags
 ```
 
-`npm start` writes a timestamped HTML report and JSON sibling to `reports/`, grading each icon `OK` / `WARN` / `ALERT`. Compare mode diffs two snapshots and reports only the cells that changed.
-
-### Flags
+Every run writes `report-<timestamp>.html` and `.json` to `reports/`, updates the `latest.html` / `latest.json` pointers, and grades each icon `OK` / `WARN` / `ALERT`. Compare mode reports only the cells whose verdict changed; pass two paths to diff saved snapshots without fetching.
 
 | Flag                                   | Effect                                                                          |
 | -------------------------------------- | ------------------------------------------------------------------------------- |
-| `--compare <before.json> [after.json]` | Diff snapshots. With one path, captures a fresh snapshot first.                 |
+| `--compare <before.json> [after.json]` | Diff snapshots. One path captures fresh first; `latest` means the previous run. |
 | `--domains <a.com,b.com>`              | Inspect these domains instead of the configured list.                           |
-| `--fail-on <warn\|alert>`              | Exit with code 2 if any cell is at or above this verdict. For CI/cron canaries. |
+| `--fail-on <warn\|alert>`              | Exit with code 2 if any cell is at or above this verdict.                       |
 | `--out <dir>`                          | Output directory (default `reports`).                                           |
 | `-h, --help` / `-v, --version`         | Help and version.                                                               |
 
-### As a binary
+Installed as a package (`npm install -g .`, or `npx favicon-inspector` once published), the same flags work directly: `favicon-inspector --fail-on alert`.
 
-`npm run build` compiles to `dist/`, and the package exposes a `favicon-inspector` bin:
+## Monitoring
 
-```bash
-npm run build
-node dist/index.js --domains example.com --fail-on alert
-```
+`.github/workflows/favicon-monitor.yml` captures a snapshot on a daily schedule with `--fail-on alert`, so a degraded icon shows up as a failed Actions run. Reports from each run are kept as workflow artifacts for 30 days.
 
 ## Configuration
 

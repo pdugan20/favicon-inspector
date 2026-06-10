@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseArgs, meetsFailThreshold, getVersion, CliError } from '../cli.js';
+import {
+  parseArgs,
+  meetsFailThreshold,
+  resolveSnapshotPath,
+  getVersion,
+  CliError,
+} from '../cli.js';
 
 describe('parseArgs', () => {
   it('returns defaults with no args', () => {
@@ -93,6 +99,23 @@ describe('meetsFailThreshold', () => {
     expect(meetsFailThreshold(['OK', 'OK'], 'warn')).toBe(false);
     expect(meetsFailThreshold(['OK', 'WARN'], 'warn')).toBe(true);
     expect(meetsFailThreshold(['OK', 'ALERT'], 'warn')).toBe(true);
+  });
+});
+
+describe('resolveSnapshotPath', () => {
+  it("expands 'latest' to the pointer in the output dir", () => {
+    expect(resolveSnapshotPath('latest', 'reports')).toBe(
+      'reports/latest.json'
+    );
+    expect(resolveSnapshotPath('latest', '/tmp/out')).toBe(
+      '/tmp/out/latest.json'
+    );
+  });
+
+  it('passes explicit paths through untouched', () => {
+    expect(resolveSnapshotPath('reports/a.json', 'reports')).toBe(
+      'reports/a.json'
+    );
   });
 });
 

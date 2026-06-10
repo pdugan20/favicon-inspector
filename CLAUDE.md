@@ -19,7 +19,7 @@ is observable instead of guessed.
 
 ```bash
 npm start                                  # capture a snapshot, write reports/
-npm start -- --compare reports/<old>.json  # capture fresh + diff vs old
+npm start -- --compare latest              # capture fresh + diff vs previous run
 npm start -- --compare <old>.json <new>.json  # diff two files, no fetching
 npm start -- --help                        # full flag reference
 npm test                                   # vitest
@@ -29,7 +29,10 @@ npm run build && node dist/index.js -h     # compiled bin (npm exposes it as fav
 
 Other flags: `--domains a.com,b.com` (override the configured list),
 `--fail-on warn|alert` (exit 2 when met, for CI/cron), `--out <dir>`.
-Flag parsing lives in `src/cli.ts`; unknown flags are rejected.
+Flag parsing lives in `src/cli.ts`; unknown flags are rejected. Every
+capture also updates `latest.json` / `latest.html` pointers in the
+output dir, and `.github/workflows/favicon-monitor.yml` runs a daily
+`--fail-on alert` capture.
 
 ## Conventions
 

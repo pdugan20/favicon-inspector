@@ -24,6 +24,8 @@ writes an HTML + JSON report. With --compare, diffs snapshots instead.
 Options:
   --compare <before.json> [after.json]  Diff against a prior snapshot. With one
                                         path, captures a fresh snapshot first.
+                                        'latest' is shorthand for the
+                                        latest.json pointer in the output dir.
   --domains <a.com,b.com>               Inspect these domains instead of the
                                         list in src/config.ts.
   --fail-on <warn|alert>                Exit 2 if any cell is at or above this
@@ -132,6 +134,11 @@ export function parseArgs(argv: string[]): CliOptions {
   }
 
   return options;
+}
+
+/** Expand the 'latest' shorthand to the latest.json pointer in outDir. */
+export function resolveSnapshotPath(path: string, outDir: string): string {
+  return path === 'latest' ? `${outDir}/latest.json` : path;
 }
 
 const VERDICT_RANK: Record<Verdict, number> = { OK: 0, WARN: 1, ALERT: 2 };

@@ -1,5 +1,14 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { toDataUri, toJson, renderHtml, type Snapshot } from '../report.js';
+import {
+  toDataUri,
+  toJson,
+  renderHtml,
+  writeReports,
+  type Snapshot,
+} from '../report.js';
 
 const snapshot: Snapshot = {
   capturedAt: '2026-06-09T12:00:00.000Z',
@@ -47,6 +56,24 @@ describe('toJson', () => {
     expect(parsed.cells[0].dataUri).toBeUndefined();
     expect(parsed.cells[0].analysis.verdict).toBe('ALERT');
     expect(parsed.capturedAt).toBe('2026-06-09T12:00:00.000Z');
+  });
+});
+
+describe('writeReports', () => {
+  it('writes stamped reports plus latest.json/latest.html pointers', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'favicon-report-'));
+    try {
+      const { htmlPath, jsonPath } = writeReports(snapshot, dir);
+      expect(htmlPath).toBe(`${dir}/report-2026-06-09T12-00-00-000Z.html`);
+      expect(readFileSync(jsonPath, 'utf8')).toBe(
+        readFileSync(`${dir}/latest.json`, 'utf8')
+      );
+      expect(readFileSync(htmlPath, 'utf8')).toBe(
+        readFileSync(`${dir}/latest.html`, 'utf8')
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

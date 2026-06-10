@@ -169,7 +169,11 @@ export function writeReports(
   const stamp = snapshot.capturedAt.replace(/[:.]/g, '-');
   const htmlPath = `${outDir}/report-${stamp}.html`;
   const jsonPath = `${outDir}/report-${stamp}.json`;
-  writeFileSync(htmlPath, renderHtml(snapshot));
-  writeFileSync(jsonPath, toJson(snapshot));
+  const html = renderHtml(snapshot);
+  const json = toJson(snapshot);
+  writeFileSync(htmlPath, html);
+  writeFileSync(jsonPath, json);
+  writeFileSync(`${outDir}/latest.html`, html);
+  writeFileSync(`${outDir}/latest.json`, json);
   return { htmlPath, jsonPath };
 }
