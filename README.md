@@ -36,7 +36,7 @@ Installed as a package (`npm install -g .`, or `npx favicon-inspector` once publ
 
 ## Monitoring
 
-`.github/workflows/favicon-monitor.yml` captures a snapshot on a daily schedule with `--fail-on alert`, so a degraded icon shows up as a failed Actions run. Reports from each run are kept as workflow artifacts for 30 days.
+`.github/workflows/favicon-monitor.yml` captures a snapshot with `--fail-on alert` when dispatched from the Actions tab, so a degraded icon shows up as a failed run. Reports from each run are kept as workflow artifacts for 30 days.
 
 ## Configuration
 

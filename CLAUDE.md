@@ -31,8 +31,8 @@ Other flags: `--domains a.com,b.com` (override the configured list),
 `--fail-on warn|alert` (exit 2 when met, for CI/cron), `--out <dir>`.
 Flag parsing lives in `src/cli.ts`; unknown flags are rejected. Every
 capture also updates `latest.json` / `latest.html` pointers in the
-output dir, and `.github/workflows/favicon-monitor.yml` runs a daily
-`--fail-on alert` capture.
+output dir, and `.github/workflows/favicon-monitor.yml` runs a
+`--fail-on alert` capture on manual dispatch.
 
 ## Conventions
 
