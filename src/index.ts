@@ -6,6 +6,7 @@ import { buildGoogleUrl } from './endpoints.js';
 import { analyzeImage } from './analyze.js';
 import { fetchImage, mapWithConcurrency } from './fetch.js';
 import { probeOrigin, type OriginAsset } from './origin.js';
+import { deriveAllOriginFindings } from './originChecks.js';
 import { toDataUri, writeReports, type Cell, type Snapshot } from './report.js';
 import { diffSnapshots, renderDiffHtml } from './compare.js';
 import {
@@ -68,7 +69,9 @@ async function captureSnapshot(domains: DomainConfig[]): Promise<Snapshot> {
     origins[d.domain] = await probeOrigin(d.domain);
   });
 
-  return { capturedAt, cells, origins };
+  const originFindings = deriveAllOriginFindings(origins);
+
+  return { capturedAt, cells, origins, originFindings };
 }
 
 function loadSnapshot(path: string): Snapshot {
@@ -94,6 +97,13 @@ function summarize(snapshot: Snapshot): void {
     console.log(
       `[ALERT] ${c.domain} ${c.endpoint} ${c.size}px -> ${c.analysis.format}/${c.analysis.cornerClass}`
     );
+  }
+  const findings = Object.values(snapshot.originFindings ?? {}).flat();
+  if (findings.length > 0) {
+    console.log(`[INFO] ${findings.length} origin finding(s)`);
+    for (const f of findings) {
+      console.log(`[${f.severity}] ${f.domain} ${f.code}: ${f.message}`);
+    }
   }
 }
 

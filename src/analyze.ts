@@ -62,6 +62,37 @@ export function sniffFormat(bytes: Uint8Array): ImageFormat {
   return 'unknown';
 }
 
+/**
+ * Pull intrinsic dimensions from an SVG: explicit width/height attributes
+ * (ignoring percentage units), else the viewBox extents. Used to flag
+ * non-square vector masters that Google stretches into a square box.
+ */
+export function svgDimensions(bytes: Uint8Array): {
+  width?: number;
+  height?: number;
+} {
+  const head = new TextDecoder().decode(bytes.slice(0, 1024));
+  const tag = /<svg\b[^>]*>/i.exec(head)?.[0];
+  if (!tag) return {};
+  const attr = (name: string): number | undefined => {
+    const m = new RegExp(`\\b${name}\\s*=\\s*["']?\\s*([\\d.]+)(%)?`, 'i').exec(
+      tag
+    );
+    if (!m || m[2] === '%') return undefined; // ignore relative units
+    const n = Number(m[1]);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  };
+  const width = attr('width');
+  const height = attr('height');
+  if (width && height) return { width, height };
+  const vb = /\bviewBox\s*=\s*["']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)/i
+    .exec(tag)
+    ?.slice(1, 3)
+    .map(Number);
+  if (vb && vb[0] > 0 && vb[1] > 0) return { width: vb[0], height: vb[1] };
+  return {};
+}
+
 export interface Rgba {
   width: number;
   height: number;
@@ -208,6 +239,13 @@ export function analyzeImage(
   let height: number | undefined;
   let hasAlpha: boolean | undefined;
   let cornerClass: CornerClass = 'UNDECODED';
+  if (format === 'svg') {
+    const dims = svgDimensions(bytes);
+    width = dims.width;
+    height = dims.height;
+    const verdict = verdictFor(format, cornerClass, opts.expected);
+    return { format, width, height, hasAlpha, cornerClass, verdict };
+  }
   try {
     const img = decodeToRgba(bytes, format);
     if (img) {

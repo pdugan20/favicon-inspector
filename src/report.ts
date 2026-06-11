@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 import type { Endpoint } from './config.js';
 import type { Analysis, Verdict } from './analyze.js';
 import type { OriginAsset } from './origin.js';
+import type { OriginFinding } from './originChecks.js';
 
 export interface Cell {
   domain: string;
@@ -19,6 +20,7 @@ export interface Snapshot {
   capturedAt: string;
   cells: Cell[];
   origins: Record<string, OriginAsset[]>;
+  originFindings?: Record<string, OriginFinding[]>;
 }
 
 export function toDataUri(
@@ -32,7 +34,12 @@ export function toDataUri(
 export function toJson(snapshot: Snapshot): string {
   const cells = snapshot.cells.map(({ dataUri: _dataUri, ...rest }) => rest);
   return JSON.stringify(
-    { capturedAt: snapshot.capturedAt, cells, origins: snapshot.origins },
+    {
+      capturedAt: snapshot.capturedAt,
+      cells,
+      origins: snapshot.origins,
+      originFindings: snapshot.originFindings ?? {},
+    },
     null,
     2
   );
@@ -85,6 +92,28 @@ function originPanel(origins: Snapshot['origins']): string {
     <table class="origin">
       <tr><th>Domain</th><th>Path</th><th>Source</th><th>Status</th><th>Content-Type</th><th>Analysis</th></tr>
       ${rows.join('')}
+    </table>`;
+}
+
+function findingsPanel(findings: Snapshot['originFindings']): string {
+  const entries = Object.values(findings ?? {}).flat();
+  if (entries.length === 0) return '';
+  const rows = entries
+    .map(
+      (f) => `
+        <tr>
+          <td>${escapeHtml(f.domain)}</td>
+          <td style="color:${VERDICT_COLOR[f.severity]}">${f.severity}</td>
+          <td>${escapeHtml(f.code)}</td>
+          <td>${escapeHtml(f.message)}</td>
+        </tr>`
+    )
+    .join('');
+  return `
+    <h2>Origin findings</h2>
+    <table class="origin">
+      <tr><th>Domain</th><th>Severity</th><th>Code</th><th>Recommendation</th></tr>
+      ${rows}
     </table>`;
 }
 
@@ -154,6 +183,7 @@ export function renderHtml(snapshot: Snapshot): string {
 <body>
   <h1>favicon-inspector</h1>
   <div class="meta">Captured ${snapshot.capturedAt}</div>
+  ${findingsPanel(snapshot.originFindings)}
   ${originPanel(snapshot.origins)}
   <h2>Google favicon matrix</h2>
   <div class="blocks">${matrixTables(snapshot.cells)}</div>
