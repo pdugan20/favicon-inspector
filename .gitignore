@@ -1,5 +1,6 @@
 node_modules/
 reports/
+generated/
 dist/
 coverage/
 *.log
