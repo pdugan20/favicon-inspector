@@ -68,7 +68,9 @@ those two slots. Output lands in `generated/<domain>/` with a `head.html`
 link snippet to deploy.
 `npm run favicons:preview` then builds a self-contained gallery at
 `generated/preview.html` to eyeball every icon on transparent and white
-backgrounds. The rationale and citations are in `docs/favicon-findings.md`.
+backgrounds. The rationale and citations are in `docs/favicon-findings.md`,
+and per-platform deploy steps (Mintlify, Next.js, static) are in
+`docs/favicon-deploy.md`.
 
 ## Monitoring
 
