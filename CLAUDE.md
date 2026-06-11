@@ -22,6 +22,8 @@ npm start                                  # capture a snapshot, write reports/
 npm start -- --compare latest              # capture fresh + diff vs previous run
 npm start -- --compare <old>.json <new>.json  # diff two files, no fetching
 npm start -- --help                        # full flag reference
+npm run favicons:generate                  # build corrected favicon sets -> generated/
+npm run favicons:preview                    # gallery of generated icons -> generated/preview.html
 npm test                                   # vitest
 npm run lint && npm run type-check         # checks
 npm run build && node dist/index.js -h     # compiled bin (npm exposes it as favicon-inspector)

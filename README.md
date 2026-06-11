@@ -55,6 +55,21 @@ Exit codes:
   2  --fail-on threshold met
 ```
 
+## Generating corrected favicons
+
+When the inspector flags a domain, `npm run favicons:generate` builds a
+Google-correct favicon set for each configured domain. Tab icons come
+from a transparent master (non-square sources letterboxed, never
+stretched). The `apple-touch-icon` and maskable icon come from an opaque,
+full-bleed tile you drop in `scripts/masters/<domain>.tile.png` (see
+`scripts/masters/README.md` for the format) so they render edge-to-edge
+and can never be flattened to a black square; domains without a tile skip
+those two slots. Output lands in `generated/<domain>/` with a `head.html`
+link snippet to deploy.
+`npm run favicons:preview` then builds a self-contained gallery at
+`generated/preview.html` to eyeball every icon on transparent and white
+backgrounds. The rationale and citations are in `docs/favicon-findings.md`.
+
 ## Monitoring
 
 `.github/workflows/favicon-monitor.yml` captures a snapshot with `--fail-on alert` when dispatched from the Actions tab, so a degraded icon shows up as a failed run. Reports from each run are kept as workflow artifacts for 30 days.
