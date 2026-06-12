@@ -42,7 +42,7 @@ describe('deriveOriginFindings', () => {
     expect(findings.map((f) => f.code)).toContain('APPLE_TOUCH_TRANSPARENT');
   });
 
-  it('flags a non-square master and a missing apple-touch (getbiblio.app case)', () => {
+  it('flags a non-square master but not a missing apple-touch (getbiblio.app case)', () => {
     const findings = deriveOriginFindings('getbiblio.app', [
       asset('/favicon.ico', 'ico'),
       asset('/favicon.svg', 'svg', { width: 65, height: 81 }),
@@ -50,10 +50,11 @@ describe('deriveOriginFindings', () => {
     ]);
     const codes = findings.map((f) => f.code);
     expect(codes).toContain('NON_SQUARE_MASTER');
-    expect(codes).toContain('APPLE_TOUCH_MISSING');
+    // A missing apple-touch is the recommended state, not a finding.
+    expect(codes).not.toContain('APPLE_TOUCH_TRANSPARENT');
   });
 
-  it('treats the Next.js apple-icon name as an apple-touch-icon', () => {
+  it('recognizes the Next.js apple-icon name and flags it when transparent', () => {
     const findings = deriveOriginFindings('next-up.app', [
       asset('/icon.png', 'png', {
         width: 512,
@@ -63,10 +64,10 @@ describe('deriveOriginFindings', () => {
       asset('/apple-icon.png', 'png', {
         width: 180,
         height: 180,
-        cornerClass: 'OPAQUE-WHITE',
+        cornerClass: 'TRANSPARENT',
       }),
     ]);
-    expect(findings.map((f) => f.code)).not.toContain('APPLE_TOUCH_MISSING');
+    expect(findings.map((f) => f.code)).toContain('APPLE_TOUCH_TRANSPARENT');
   });
 
   it('flags a small raster-only master with no SVG fallback', () => {

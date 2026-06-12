@@ -49,38 +49,56 @@ Refuted myths (each killed 3-0 in verification):
 - `fallback_opts=TYPE,SIZE,URL` controls fallback across icon type and
   size. Confirmed against Chromium's `large_icon_service.cc`.
 
-## The black-square cause and fix (high confidence)
+## The black-square cause and fix (verified in production)
 
-The core defense against transparent icons being flattened onto black
-and re-encoded as JPEG:
+The black square comes from one specific thing: a **served, transparent
+`apple-touch-icon`**. Google's favicon service reads it, flattens the
+transparent pixels onto black, and re-encodes a JPEG at 48/64px.
 
-- Keep **tab icons** (`favicon.ico`, `favicon.svg`, small PNGs)
-  **transparent**.
-- Make the **`apple-touch-icon` and the 512px maskable PWA icon
-  OPAQUE**, with a filled background and padding.
+The fix we verified on these domains:
 
-A transparent `apple-touch-icon` renders as a **black square** because
-the consuming OS/pipeline fills empty pixels with black. Maskable icons
-must be filled per Google's [web.dev maskable-icon guidance][maskable]
-(use an ~80% safe zone for padding).
+- Serve a **transparent, square `favicon.svg` + `favicon.ico`**.
+- **Do not serve an apple-touch-icon at all** — 404 it. A _missing_
+  apple-touch is the correct state; Google falls back to the transparent
+  favicon and it stays transparent at every size.
+- Make sure the apex page Google crawls advertises **only** that
+  transparent favicon (no apple-touch `<link>`). If the apex redirects to
+  a docs host that injects a transparent apple-touch (e.g. Mintlify),
+  Google picks that up — serve a self-contained apex instead.
 
-## Recommended minimal set (high confidence)
+**Proof:** getbiblio.app serves a transparent favicon with the
+apple-touch 404'd and renders correctly (never black) — its only defect
+was a non-square favicon causing distortion. rewind.rest went black only
+because its apex redirected to a Mintlify page that advertised a
+transparent apple-touch.
 
-The 2024-2026 consensus ([Evil Martians][evilmartians]), all built from
-a single large square master:
+A large **square** master is the other half: it fixes the upscaling blur
+and aspect-ratio stretch when Google has only a small or non-square
+source. This is independent of the black-square issue.
 
-| File                           | Size                               | Opacity                     |
-| ------------------------------ | ---------------------------------- | --------------------------- |
-| `favicon.ico`                  | 32x32 (opt. 16/32/48 frames)       | transparent                 |
-| `favicon.svg`                  | vector, light/dark via media query | transparent                 |
-| `favicon-96x96.png`            | 96x96                              | transparent                 |
-| `apple-touch-icon.png`         | 180x180                            | **opaque + padding**        |
-| `web-app-manifest-192x192.png` | 192x192                            | transparent ok              |
-| `web-app-manifest-512x512.png` | 512x512 maskable                   | **opaque + ~80% safe zone** |
+### When you can't drop the apple-touch (opaque fallback)
 
-A large **square** master is the single most important input: it fixes
-both the upscaling blur and the aspect-ratio stretch seen when Google
-has only a small or non-square source.
+Some hosts (Mintlify) auto-generate a transparent apple-touch you can't 404. There the only fix is to make the **source image opaque and square**
+so the generated apple-touch is opaque (it can't flatten to black) — at
+the cost of the icon no longer being transparent. Prefer the
+transparent + no-apple-touch approach wherever you control the server.
+
+## Recommended minimal set
+
+Built from a single large **square** master:
+
+| File          | Size                         | Opacity / notes      |
+| ------------- | ---------------------------- | -------------------- |
+| `favicon.ico` | 32x32 (opt. 16/32/48 frames) | transparent, square  |
+| `favicon.svg` | vector, square viewBox       | transparent          |
+| apple-touch   | —                            | **not served (404)** |
+
+If a host forces an apple-touch (Mintlify), make the favicon source
+**opaque + square** so the generated apple-touch is opaque, not
+transparent. The [`favicons`][favicons-npm] generator and the
+[Evil Martians][evilmartians] set remain useful for that opaque path and
+for full PWA/maskable coverage when a site genuinely needs installable
+icons.
 
 ## Generator tooling (high confidence, primary sources)
 
@@ -117,24 +135,31 @@ These are empirically answerable with `favicon-inspector` itself:
 - Whether `faviconV2` uses SVG directly or always rasterizes, and how
   it picks a raster size from SVG for large requests.
 
-## How this maps to the monitored domains
+## How this was fixed on the monitored domains
 
-- **rewind.rest** (s2 48/64 black square): origin serves transparent
-  PNGs and has no opaque `apple-touch-icon` (it 404s). Fix: add an
-  opaque, padded 180x180 `apple-touch-icon` plus an opaque maskable 512.
-- **getbiblio.app** (distortion at >=96px): the largest master is a
-  non-square 65x81 SVG, which violates Google's square requirement. Fix:
-  add a 512x512 square master.
+All controlled-server fixes followed the same pattern: self-contained
+apex, transparent **square** favicon, apple-touch 404'd.
+
+- **getbiblio.app** (distortion, not black): server.py already served a
+  transparent favicon with apple-touch 404'd; the `favicon.svg` was a
+  non-square 65x81. Fixed by squaring the SVG (81x81).
+- **rewind.rest** (black square): the apex worker 404'd apple-touch but
+  302-redirected `/` to the Mintlify docs, which advertised a transparent
+  apple-touch Google flattened to black. Fixed by serving a
+  self-contained landing page at the apex (transparent favicon only, no
+  apple-touch) and squaring the favicon (23x17 -> 23x23).
+- **clickwheel.fm** (black square): had no apex layer — a Cloudflare
+  Redirect Rule sent everything to the Mintlify docs. Fixed by adding an
+  apex worker (same pattern as rewind) and removing the redirect rule.
 - **next-up.app** (stale design cached): origin already serves a clean
-  512x512 transparent `icon.png`; the issue is Google's stale cache,
-  which is not fixable from the origin. Keep the URL stable and wait.
+  512x512 transparent `icon.png`; not black. The cached old design is
+  Google's stale cache, not an origin defect. Keep the URL stable, wait.
 
-Common root cause: all three lack a large, square, opacity-correct
-raster master. One generated set fixes the two real bugs.
+After any origin fix, Google's cached cells stay stale for days to weeks
+until re-crawl; re-run `favicon-inspector` to watch them flip.
 
 [google-favicon]: https://developers.google.com/search/docs/appearance/favicon-in-search
 [seroundtable]: https://www.seroundtable.com/google-favicon-user-agent-36234.html
-[maskable]: https://web.dev/articles/maskable-icon
 [evilmartians]: https://evilmartians.com/chronicles/how-to-favicon-in-2021-six-files-that-fit-most-needs
 [favicons-npm]: https://github.com/itgalaxy/favicons
 [rfg-npm]: https://www.npmjs.com/package/@realfavicongenerator/generate-favicon

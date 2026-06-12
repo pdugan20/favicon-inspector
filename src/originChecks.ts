@@ -3,12 +3,16 @@ import type { OriginAsset } from './origin.js';
 /**
  * Origin-side configuration problems that make Google serve a wrong icon,
  * derived from the probed assets (see docs/favicon-findings.md). These catch
- * the failure modes before Google does: transparent apple-touch flattened to
- * black, a non-square master that gets stretched, and a too-small master that
- * gets upscaled.
+ * the failure modes before Google does: a *served* transparent apple-touch
+ * (which Google flattens onto black), a non-square master that gets stretched,
+ * and a too-small raster master that gets upscaled.
+ *
+ * Note: a *missing* apple-touch is NOT a problem — it's the recommended state.
+ * A transparent favicon with no apple-touch does not flatten to black
+ * (verified in production on getbiblio.app); only a served transparent
+ * apple-touch does.
  */
 export type OriginFindingCode =
-  | 'APPLE_TOUCH_MISSING'
   | 'APPLE_TOUCH_TRANSPARENT'
   | 'NON_SQUARE_MASTER'
   | 'SMALL_MASTER';
@@ -36,27 +40,18 @@ export function deriveOriginFindings(
   const reachable = assets.filter((a) => a.status === 200);
   if (reachable.length === 0) return findings; // can't assess; origin down
 
-  const apple = reachable.filter((a) => isAppleTouch(a.path));
-  if (apple.length === 0) {
+  // A *served* transparent apple-touch is the black-square trigger. A missing
+  // apple-touch is fine (the recommended state), so it is not flagged.
+  const transparent = reachable.find(
+    (a) => isAppleTouch(a.path) && a.analysis.cornerClass === 'TRANSPARENT'
+  );
+  if (transparent) {
     findings.push({
       domain,
-      code: 'APPLE_TOUCH_MISSING',
+      code: 'APPLE_TOUCH_TRANSPARENT',
       severity: 'WARN',
-      message:
-        'No reachable apple-touch-icon; add an opaque 180x180 apple-touch-icon so Google does not fall back to a transparent source that flattens to black.',
+      message: `Transparent apple-touch-icon (${transparent.path}); 404 it or flatten it onto an opaque background so Google does not render it as a black square.`,
     });
-  } else {
-    const transparent = apple.find(
-      (a) => a.analysis.cornerClass === 'TRANSPARENT'
-    );
-    if (transparent) {
-      findings.push({
-        domain,
-        code: 'APPLE_TOUCH_TRANSPARENT',
-        severity: 'WARN',
-        message: `Transparent apple-touch-icon (${transparent.path}); flatten it onto an opaque background to avoid a black square.`,
-      });
-    }
   }
 
   // Largest master that reports intrinsic dimensions (raster or SVG).
