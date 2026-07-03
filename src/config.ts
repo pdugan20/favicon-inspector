@@ -12,3 +12,10 @@ export const SIZES = [16, 32, 48, 64, 96, 128, 256] as const;
 
 export const CONCURRENCY = 8;
 export const FETCH_TIMEOUT_MS = 10000;
+
+/**
+ * Perceptual-hash Hamming distance (0..64) at/above which a Google cell is
+ * treated as a different image from the origin master (see divergence.ts).
+ * Calibrated so same-art drift (<=~11) passes and wrong-logo drift (~35) trips.
+ */
+export const DIVERGENCE_THRESHOLD = 20;

@@ -1,12 +1,20 @@
 #!/usr/bin/env node
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { SIZES, ENDPOINTS, CONCURRENCY, type DomainConfig } from './config.js';
+import {
+  SIZES,
+  ENDPOINTS,
+  CONCURRENCY,
+  DIVERGENCE_THRESHOLD,
+  type DomainConfig,
+} from './config.js';
 import { loadDomains } from './domains.js';
 import { buildGoogleUrl } from './endpoints.js';
 import { analyzeImage } from './analyze.js';
+import { perceptualHash } from './perceptualHash.js';
 import { fetchImage, mapWithConcurrency } from './fetch.js';
 import { probeOrigin, type OriginAsset } from './origin.js';
 import { deriveAllOriginFindings } from './originChecks.js';
+import { deriveDivergences } from './divergence.js';
 import { toDataUri, writeReports, type Cell, type Snapshot } from './report.js';
 import { diffSnapshots, renderDiffHtml } from './compare.js';
 import {
@@ -50,6 +58,7 @@ async function captureSnapshot(domains: DomainConfig[]): Promise<Snapshot> {
           cornerClass: 'UNDECODED' as const,
           verdict: 'OK' as const,
         };
+    const pHash = r.bytes ? await perceptualHash(r.bytes) : null;
     const cell: Cell = {
       domain: job.domain.domain,
       endpoint: job.endpoint,
@@ -59,6 +68,7 @@ async function captureSnapshot(domains: DomainConfig[]): Promise<Snapshot> {
       error: r.error,
       analysis,
       dataUri: r.bytes ? toDataUri(r.contentType, r.bytes) : undefined,
+      ...(pHash ? { pHash } : {}),
     };
     return cell;
   });
@@ -70,8 +80,13 @@ async function captureSnapshot(domains: DomainConfig[]): Promise<Snapshot> {
   });
 
   const originFindings = deriveAllOriginFindings(origins);
+  const divergenceFindings = deriveDivergences(
+    cells,
+    origins,
+    DIVERGENCE_THRESHOLD
+  );
 
-  return { capturedAt, cells, origins, originFindings };
+  return { capturedAt, cells, origins, originFindings, divergenceFindings };
 }
 
 function loadSnapshot(path: string): Snapshot {
@@ -105,11 +120,27 @@ function summarize(snapshot: Snapshot): void {
       console.log(`[${f.severity}] ${f.domain} ${f.code}: ${f.message}`);
     }
   }
+  const divergences = Object.values(snapshot.divergenceFindings ?? {}).flat();
+  if (divergences.length > 0) {
+    console.log(`[INFO] ${divergences.length} icon divergence(s)`);
+    for (const d of divergences) {
+      console.log(
+        `[${d.severity}] ${d.domain} ${d.endpoint} diverges from ${d.masterPath} (distance ${d.distance}/64)`
+      );
+    }
+  }
 }
 
 function applyFailOn(snapshot: Snapshot, options: CliOptions): void {
   if (!options.failOn) return;
-  const verdicts = snapshot.cells.map((c) => c.analysis.verdict);
+  // Cell encoding verdicts and icon-divergence findings both count toward the
+  // threshold: a stale/wrong cached icon is exactly what CI should catch.
+  const verdicts = [
+    ...snapshot.cells.map((c) => c.analysis.verdict),
+    ...Object.values(snapshot.divergenceFindings ?? {})
+      .flat()
+      .map((d) => d.severity),
+  ];
   if (meetsFailThreshold(verdicts, options.failOn)) {
     console.error(`[ERROR] --fail-on ${options.failOn} threshold met`);
     process.exit(2);

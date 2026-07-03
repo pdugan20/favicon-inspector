@@ -1,6 +1,7 @@
 import { CONCURRENCY } from './config.js';
 import { fetchImage, mapWithConcurrency } from './fetch.js';
 import { analyzeImage, type Analysis, type CornerClass } from './analyze.js';
+import { perceptualHash } from './perceptualHash.js';
 
 export interface OriginAsset {
   path: string;
@@ -8,6 +9,8 @@ export interface OriginAsset {
   status: number;
   contentType: string | null;
   analysis: Analysis;
+  /** Perceptual hash for the divergence check; absent if it couldn't rasterize. */
+  pHash?: string;
 }
 
 export interface DeclaredIcon {
@@ -103,12 +106,14 @@ export async function probeOrigin(domain: string): Promise<OriginAsset[]> {
   return mapWithConcurrency(unique, CONCURRENCY, async (t) => {
     const r = await fetchImage(t.url);
     const analysis = r.bytes ? analyzeImage(r.bytes) : UNDECODED;
+    const pHash = r.bytes ? await perceptualHash(r.bytes) : null;
     return {
       path: new URL(t.url).pathname,
       source: t.source,
       status: r.status,
       contentType: r.contentType,
       analysis,
+      ...(pHash ? { pHash } : {}),
     };
   });
 }

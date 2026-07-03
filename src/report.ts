@@ -4,6 +4,7 @@ import type { Endpoint } from './config.js';
 import type { Analysis, Verdict } from './analyze.js';
 import type { OriginAsset } from './origin.js';
 import type { OriginFinding } from './originChecks.js';
+import type { DivergenceFinding } from './divergence.js';
 
 export interface Cell {
   domain: string;
@@ -14,6 +15,8 @@ export interface Cell {
   error?: string;
   analysis: Analysis;
   dataUri?: string;
+  /** Perceptual hash for the divergence check; absent if it couldn't rasterize. */
+  pHash?: string;
 }
 
 export interface Snapshot {
@@ -21,6 +24,7 @@ export interface Snapshot {
   cells: Cell[];
   origins: Record<string, OriginAsset[]>;
   originFindings?: Record<string, OriginFinding[]>;
+  divergenceFindings?: Record<string, DivergenceFinding[]>;
 }
 
 export function toDataUri(
@@ -39,6 +43,7 @@ export function toJson(snapshot: Snapshot): string {
       cells,
       origins: snapshot.origins,
       originFindings: snapshot.originFindings ?? {},
+      divergenceFindings: snapshot.divergenceFindings ?? {},
     },
     null,
     2
@@ -117,6 +122,29 @@ function findingsPanel(findings: Snapshot['originFindings']): string {
     </table>`;
 }
 
+function divergencePanel(findings: Snapshot['divergenceFindings']): string {
+  const entries = Object.values(findings ?? {}).flat();
+  if (entries.length === 0) return '';
+  const rows = entries
+    .map(
+      (f) => `
+        <tr>
+          <td>${escapeHtml(f.domain)}</td>
+          <td>${escapeHtml(f.endpoint)}</td>
+          <td style="color:${VERDICT_COLOR[f.severity]}">${f.severity}</td>
+          <td>${f.distance}/64</td>
+          <td>${escapeHtml(f.message)}</td>
+        </tr>`
+    )
+    .join('');
+  return `
+    <h2>Icon divergence (Google cache vs origin)</h2>
+    <table class="origin">
+      <tr><th>Domain</th><th>Endpoint</th><th>Severity</th><th>Distance</th><th>Detail</th></tr>
+      ${rows}
+    </table>`;
+}
+
 function matrixTables(cells: Cell[]): string {
   const domains = [...new Set(cells.map((c) => c.domain))];
   const endpoints = [...new Set(cells.map((c) => c.endpoint))];
@@ -184,6 +212,7 @@ export function renderHtml(snapshot: Snapshot): string {
   <h1>favicon-inspector</h1>
   <div class="meta">Captured ${snapshot.capturedAt}</div>
   ${findingsPanel(snapshot.originFindings)}
+  ${divergencePanel(snapshot.divergenceFindings)}
   ${originPanel(snapshot.origins)}
   <h2>Google favicon matrix</h2>
   <div class="blocks">${matrixTables(snapshot.cells)}</div>

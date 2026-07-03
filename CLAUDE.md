@@ -5,7 +5,9 @@ A standalone Node + TypeScript CLI that inspects what Google's favicon services
 domains, alongside each domain's own origin favicon assets. It decodes every
 returned image with pure-JS `fast-png` / `jpeg-js`, classifies format,
 transparency, and background color, and emits a self-contained HTML + JSON
-report. A compare mode diffs two JSON snapshots.
+report. It also perceptual-hashes each Google cell against the origin's icon to
+flag stale or wrong cached logos that pass every encoding check. A compare mode
+diffs two JSON snapshots.
 
 ## Why it exists
 
@@ -41,6 +43,8 @@ output dir, and `.github/workflows/favicon-monitor.yml` runs a
 - No emojis in logging or output. Plain `[INFO]` / `[ERROR]` prefixes.
 - Never rely on visual judgment of an icon; classify by decoded pixels.
 - Domains live in `favicon-inspector.config.json` (`--domains` overrides);
-  sizes, endpoints, and fetch limits live in `src/config.ts`.
+  sizes, endpoints, fetch limits, and the divergence threshold live in
+  `src/config.ts`. Divergence hashing rasterizes via `sharp` (so SVG/ICO
+  origins compare too); the pure-JS decoders stay the classifier's baseline.
 - Relative imports use explicit `.js` extensions (NodeNext ESM) so the
   compiled `dist/` runs under plain Node.
