@@ -26,8 +26,7 @@ const OPAQUE_BG = '#ffffff';
 const MASTERS_DIR = path.join('scripts', 'masters');
 
 type MasterSource =
-  | { kind: 'url'; url: string }
-  | { kind: 'file'; file: string };
+  { kind: 'url'; url: string } | { kind: 'file'; file: string };
 
 interface DomainSpec {
   domain: string;
