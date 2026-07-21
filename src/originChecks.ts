@@ -13,9 +13,7 @@ import type { OriginAsset } from './origin.js';
  * apple-touch does.
  */
 export type OriginFindingCode =
-  | 'APPLE_TOUCH_TRANSPARENT'
-  | 'NON_SQUARE_MASTER'
-  | 'SMALL_MASTER';
+  'APPLE_TOUCH_TRANSPARENT' | 'NON_SQUARE_MASTER' | 'SMALL_MASTER';
 
 export interface OriginFinding {
   domain: string;
