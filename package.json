@@ -31,7 +31,7 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "lint:md": "markdownlint-cli2 '**/*.md' '#node_modules' '#reports'",
+    "lint:md": "markdownlint-cli2 '**/*.md' '#node_modules' '#reports' '#CLAUDE.md'",
     "lint:deps": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
