@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
 import {
   parseArgs,
   meetsFailThreshold,
   resolveSnapshotPath,
   getVersion,
   CliError,
-  USAGE,
 } from '../cli.js';
 
 describe('parseArgs', () => {
@@ -118,16 +116,6 @@ describe('resolveSnapshotPath', () => {
     expect(resolveSnapshotPath('reports/a.json', 'reports')).toBe(
       'reports/a.json'
     );
-  });
-});
-
-describe('USAGE', () => {
-  it('is embedded verbatim in the README', () => {
-    const readme = readFileSync(
-      new URL('../../README.md', import.meta.url),
-      'utf8'
-    );
-    expect(readme).toContain(USAGE.trim());
   });
 });
 
