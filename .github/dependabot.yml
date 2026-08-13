@@ -5,21 +5,11 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 10
-    groups:
-      eslint:
-        patterns:
-          - 'eslint'
-          - '@typescript-eslint/*'
-          - 'eslint-*'
-          - 'typescript-eslint'
-      vitest:
-        patterns:
-          - 'vitest'
-          - '@vitest/*'
+    open-pull-requests-limit: 0
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+    open-pull-requests-limit: 0
