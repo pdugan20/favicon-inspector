@@ -1,0 +1,64 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "enabled": false,
+  "extends": ["config:recommended"],
+  "timezone": "America/Los_Angeles",
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+  "branchConcurrentLimit": 3,
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "rebaseWhen": "behind-base-branch",
+  "platformAutomerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "prCreation": "not-pending",
+  "internalChecksFilter": "strict",
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "description": "Stable npm runtime non-major updates",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["dependencies", "optionalDependencies"],
+      "matchUpdateTypes": ["patch", "minor", "digest", "pin", "pinDigest"],
+      "groupName": "runtime dependencies",
+      "minimumReleaseAge": "7 days",
+      "automerge": true
+    },
+    {
+      "description": "Stable npm development non-major updates",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor", "digest", "pin", "pinDigest"],
+      "groupName": "development dependencies",
+      "minimumReleaseAge": "7 days",
+      "automerge": true
+    },
+    {
+      "description": "GitHub Actions non-major updates",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["patch", "minor", "digest", "pin", "pinDigest"],
+      "groupName": "github actions",
+      "minimumReleaseAge": "14 days",
+      "automerge": true
+    },
+    {
+      "description": "Lockfile maintenance through a pull request",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "automerge": true
+    },
+    {
+      "description": "Pre-1.0 minor updates require exception handling",
+      "matchCurrentVersion": "/^0\\./",
+      "matchUpdateTypes": ["minor", "major"],
+      "automerge": false
+    },
+    {
+      "description": "All major updates require exception handling",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ]
+}
