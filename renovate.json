@@ -12,7 +12,6 @@
   "platformAutomerge": true,
   "automergeType": "pr",
   "automergeStrategy": "squash",
-  "prCreation": "not-pending",
   "internalChecksFilter": "strict",
   "vulnerabilityAlerts": {
     "enabled": false
