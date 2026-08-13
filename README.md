@@ -1,7 +1,7 @@
 # favicon-inspector
 
-[![CI](https://github.com/pdugan20/favicon-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/pdugan20/favicon-inspector/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![CI](https://github.com/pdugan20/favicon-inspector/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/pdugan20/favicon-inspector/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/pdugan20/favicon-inspector)](LICENSE)
 
 Inspect what Google's favicon services serve and cache for a set of domains, and flag the icons that come back wrong.
 
