@@ -18,6 +18,12 @@
   },
   "packageRules": [
     {
+      "description": "TypeScript 7 waits for programmatic API ecosystem support",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "description": "Stable npm runtime non-major updates",
       "matchManagers": ["npm"],
       "matchDepTypes": ["dependencies", "optionalDependencies"],
