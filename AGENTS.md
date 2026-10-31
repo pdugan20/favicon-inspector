@@ -1,4 +1,4 @@
-# favicon-inspector
+# favicon-inspector agent guide
 
 A standalone Node + TypeScript CLI that inspects what Google's favicon services
 (`faviconV2` and legacy `s2/favicons`) serve and cache for a configured set of
