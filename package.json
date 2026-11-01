@@ -39,7 +39,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "husky",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "verify": "npm run format:check && npm run lint && npm run lint:md && npm run type-check && npm run lint:deps -- --no-exit-code && npm test && npm run build && (npm audit --audit-level=moderate --omit=dev || echo \"Dependency audit is advisory, matching CI.\")"
   },
   "lint-staged": {
     "*.{js,ts}": [
