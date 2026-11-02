@@ -77,5 +77,15 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.64.0",
     "vitest": "~4.1.10"
+  },
+  "overrides": {
+    "katex": "0.18.2",
+    "smol-toml": "1.9.1",
+    "markdown-it": "15.0.3",
+    "minimatch": "11.0.1",
+    "vite": "8.1.6",
+    "postcss": "8.5.23",
+    "source-map-js": "1.2.2",
+    "brace-expansion": "5.0.12"
   }
 }
