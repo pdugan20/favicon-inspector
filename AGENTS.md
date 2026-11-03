@@ -49,3 +49,12 @@ output dir, and `.github/workflows/favicon-monitor.yml` runs a
   origins compare too); the pure-JS decoders stay the classifier's baseline.
 - Relative imports use explicit `.js` extensions (NodeNext ESM) so the
   compiled `dist/` runs under plain Node.
+
+## Code Review Rules
+
+- Flag capture paths that permit arbitrary schemes, credentials, local/private network
+  targets, or unbounded redirects instead of validated HTTP(S) favicon endpoints.
+- Flag classification changes that infer format, transparency, background, or divergence
+  from filenames/headers/visual inspection rather than decoded pixel evidence.
+- Flag report writes that escape the selected output directory, overwrite an explicitly
+  supplied comparison snapshot, or embed fetched active content unsafely in HTML.
