@@ -1,3 +1,5 @@
+import { MAX_IMAGE_PIXELS } from './config.js';
+import { boundedImageInput, sniffFormat } from './analyze.js';
 import sharp from 'sharp';
 
 /**
@@ -31,7 +33,14 @@ export async function perceptualHash(
   bytes: Uint8Array
 ): Promise<string | null> {
   try {
-    const raw = await sharp(Buffer.from(bytes), { density: 256 })
+    // Do not send unknown encodings (e.g. SVGZ or UTF-16 SVG) around the SVG
+    // resource checks via sharp's more permissive format auto-detection.
+    if (sniffFormat(bytes) === 'unknown') return null;
+    const raw = await sharp(Buffer.from(boundedImageInput(bytes)), {
+      density: 256,
+      limitInputPixels: MAX_IMAGE_PIXELS,
+    })
+      .timeout({ seconds: 5 })
       .flatten({ background: '#ffffff' })
       .greyscale()
       .resize(HASH_W, HASH_H, { fit: 'fill' })
