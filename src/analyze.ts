@@ -1,3 +1,9 @@
+import { inflateSync } from 'node:zlib';
+import {
+  MAX_IMAGE_PIXELS,
+  MAX_RESPONSE_BYTES,
+  MAX_PNG_CHUNKS,
+} from './config.js';
 import { decode as decodePng } from 'fast-png';
 import * as jpeg from 'jpeg-js';
 
@@ -93,6 +99,82 @@ export function svgDimensions(bytes: Uint8Array): {
   return {};
 }
 
+/** Bound decoder input and reject compressed or embedded resource amplification. */
+export function boundedImageInput(bytes: Uint8Array): Uint8Array {
+  if (bytes.length > MAX_RESPONSE_BYTES)
+    throw new Error('Image exceeds byte limit');
+  if (sniffFormat(bytes) === 'svg') {
+    const svg = new TextDecoder().decode(bytes);
+    // Only resource-free vectors: librsvg's outer pixel cap does not constrain
+    // embedded images/fonts. Reject entities and CSS escapes as obfuscation paths.
+    if (
+      /<!DOCTYPE|<!ENTITY|<(?:[^<>\s/]+:)?(?:image|feImage|foreignObject|script)\b|@import|@font-face|[&\\]/i.test(
+        svg
+      )
+    )
+      throw new Error('SVG embedded resources are not supported');
+    for (const match of svg.matchAll(/\bhref\s*=\s*(["'])(.*?)\1/gis)) {
+      if (!/^#[A-Za-z0-9_.:-]+$/.test(match[2]))
+        throw new Error('SVG external references are not supported');
+    }
+    const urls = /url\s*\(/gi;
+    for (let match = urls.exec(svg); match; match = urls.exec(svg)) {
+      const end = svg.indexOf(')', urls.lastIndex);
+      if (end < 0) throw new Error('Invalid SVG resource reference');
+      const value = svg
+        .slice(urls.lastIndex, end)
+        .trim()
+        .replace(/^(["'])(.*)\1$/, '$2');
+      if (!/^#[A-Za-z0-9_.:-]+$/.test(value))
+        throw new Error('SVG external references are not supported');
+      urls.lastIndex = end + 1;
+    }
+    return bytes;
+  }
+  if (sniffFormat(bytes) !== 'png') return bytes;
+  const input = Buffer.from(bytes);
+  if (
+    input.length < 33 ||
+    input.toString('latin1', 12, 16) !== 'IHDR' ||
+    input.readUInt32BE(8) !== 13
+  )
+    throw new Error('Invalid PNG header');
+  const width = input.readUInt32BE(16);
+  const height = input.readUInt32BE(20);
+  if (!width || !height || width * height > MAX_IMAGE_PIXELS)
+    throw new Error('Image exceeds pixel limit');
+  const chunks: Buffer[] = [input.subarray(0, 8)];
+  const data: Buffer[] = [];
+  let ended = false;
+  let chunkCount = 0;
+  for (let offset = 8; offset + 12 <= input.length;) {
+    if (++chunkCount > MAX_PNG_CHUNKS)
+      throw new Error('PNG chunk limit exceeded');
+    const length = input.readUInt32BE(offset);
+    const end = offset + length + 12;
+    if (end > input.length) throw new Error('Truncated PNG chunk');
+    const type = input.toString('latin1', offset + 4, offset + 8);
+    if (!/^[A-Za-z]{4}$/.test(type)) throw new Error('Invalid PNG chunk type');
+    if (type === 'IHDR' && offset !== 8)
+      throw new Error('Duplicate PNG header');
+    if (['IHDR', 'PLTE', 'tRNS', 'IDAT', 'IEND'].includes(type))
+      chunks.push(input.subarray(offset, end));
+    if (type === 'IDAT') data.push(input.subarray(offset + 8, end - 4));
+    if (type === 'IEND') {
+      ended = true;
+      break;
+    }
+    offset = end;
+  }
+  if (!ended || !data.length) throw new Error('Incomplete PNG');
+  // At most RGBA16 plus Adam7 row-filter overhead. Corrupt small-header bombs
+  // cannot ask fflate to expand an arbitrarily large stream afterwards.
+  inflateSync(Buffer.concat(data), {
+    maxOutputLength: width * height * 8 + height * 7 + 64,
+  });
+  return Buffer.concat(chunks);
+}
+
 export interface Rgba {
   width: number;
   height: number;
@@ -163,7 +245,7 @@ export function decodeToRgba(
   format: ImageFormat
 ): (Rgba & { hasAlpha: boolean }) | null {
   if (format === 'png') {
-    const img = decodePng(bytes);
+    const img = decodePng(boundedImageInput(bytes));
     const { width, height, channels } = img;
     const src = img.data as Uint8Array;
     const palette = (img as { palette?: number[][] }).palette;
@@ -219,7 +301,12 @@ export function decodeToRgba(
     };
   }
   if (format === 'jpeg') {
-    const img = jpeg.decode(bytes, { useTArray: true });
+    boundedImageInput(bytes);
+    const img = jpeg.decode(bytes, {
+      useTArray: true,
+      maxResolutionInMP: MAX_IMAGE_PIXELS / 1_000_000,
+      maxMemoryUsageInMB: 64,
+    });
     return {
       width: img.width,
       height: img.height,

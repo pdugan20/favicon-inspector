@@ -12,6 +12,12 @@ export const SIZES = [16, 32, 48, 64, 96, 128, 256] as const;
 
 export const CONCURRENCY = 8;
 export const FETCH_TIMEOUT_MS = 10000;
+export const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+export const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
+export const MAX_REDIRECTS = 5;
+export const MAX_ORIGIN_ICONS = 32;
+export const MAX_IMAGE_PIXELS = 4_000_000;
+export const MAX_PNG_CHUNKS = 4096;
 
 /**
  * Perceptual-hash Hamming distance (0..64) at/above which a Google cell is

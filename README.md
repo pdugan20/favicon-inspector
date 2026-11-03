@@ -32,6 +32,17 @@ npm start -- --help                  # show all options and exit codes
 
 Domains come from [`favicon-inspector.config.json`](favicon-inspector.config.json). Set `expected` to `opaque` when a domain legitimately uses a solid tile; this suppresses black-background alerts. Sizes, endpoints, and fetch limits live in [`src/config.ts`](src/config.ts).
 
+## Network and image limits
+
+Captures accept credential-free public HTTP(S) destinations only. DNS results are checked
+and pinned for each connection and redirect; local/private and special-use addresses are
+rejected. Each resource has one 10-second deadline, at most five redirects, and a 4 MiB
+body cap (2 MiB for HTML/manifests). Compressed HTTP responses and HTTPS downgrade
+redirects are rejected. Origin discovery adds at most 32 icons beyond the four well-known
+paths. Images exceeding four million pixels or decoder limits remain undecoded; PNG
+compressed metadata is not processed. Hashing accepts recognized PNG/JPEG/ICO and resource-free UTF-8 SVG; unknown encodings are not passed to native auto-detection. SVG hashing supports resource-free vectors; embedded raster/font resources, external references, entities, and escaped CSS are rejected. A rejected resource appears as a failed fetch or
+undecoded image instead of terminating the capture.
+
 ## Generating corrected favicons
 
 `npm run favicons:generate` builds favicon sets designed to avoid the known Google rendering failures. Output lands in `generated/<domain>/`; optional opaque tile assets add full-bleed `apple-touch-icon` and maskable outputs. See the [master asset requirements](scripts/masters/README.md), [favicon findings](docs/favicon-findings.md), and [deployment guide](docs/favicon-deploy.md).
@@ -39,6 +50,8 @@ Domains come from [`favicon-inspector.config.json`](favicon-inspector.config.jso
 Run `npm run favicons:preview` to build a self-contained gallery at `generated/preview.html`.
 
 ## Development
+
+The synthetic TLS regression fixtures require `openssl` on PATH; they generate temporary test-only keys and remove them after the tests.
 
 ```bash
 npm test                # run the test suite

@@ -23,9 +23,24 @@ Required controls:
 Update this model when endpoint selection, redirect handling, decoders, report rendering,
 filesystem output, scheduling, or network scope changes.
 
-## Known gaps
+## Enforced fetch and decode bounds
 
-`fetchImage()` applies a timeout but follows redirects automatically and buffers the full
-response. Origin HTML/manifest probes also follow redirects and lack explicit deadlines.
-Private-address rejection and response/decode size limits are requirements to assess
-before treating remote origins as safe to probe from a privileged network.
+`fetchResource()` checks credential-free HTTP(S) URLs and all resolved addresses at every
+redirect, then pins those vetted addresses into the socket lookup while preserving Host
+and TLS verification. Local/private, mapped/translated and special-use addresses are
+rejected. A single 10-second deadline covers DNS, redirects and streamed bodies; redirect
+chains stop at five hops and HTTPS redirects cannot downgrade to HTTP. Connections are
+not reused across DNS checks. DNS uses a cancellable per-fetch resolver, and body
+storage coalesces small chunks into bounded buffers. HTTP compression is not requested or accepted.
+
+Image bodies stop at 4 MiB, HTML/manifests at 2 MiB, and an origin contributes at most 32
+discovered icons in addition to four well-known paths. Relative links use the final
+redirected document URL. Decoder inputs are capped at four million pixels; PNG data is
+pre-inflated with an output bound and compressed ancillary metadata is omitted from
+decoder input, with at most 4096 chunks. SVG hashing rejects embedded raster/font
+resources, external references, entities and CSS escapes before native processing.
+JPEG memory and resolution limits and a five-second sharp processing
+limit bound decoding. The fetched original remains the report's image payload.
+
+These are application controls, not a replacement for network-level egress policy.
+The regression tests use synthetic inputs and owned loopback HTTP/TLS servers; no external capture or service mutation is performed.
