@@ -36,7 +36,7 @@ Domains come from [`favicon-inspector.config.json`](favicon-inspector.config.jso
 
 Captures accept credential-free public HTTP(S) destinations only. DNS results are checked
 and pinned for each connection and redirect; local/private and special-use addresses are
-rejected. Each resource has one 10-second deadline, at most five redirects, and a 4 MiB
+rejected. System DNS honors hosts files and split DNS; at most two OS lookups remain active, and timed-out queued requests are removed. Running OS lookups can outlive the caller deadline but cannot connect afterwards. Each resource has one 10-second deadline, at most five redirects, and a 4 MiB
 body cap (2 MiB for HTML/manifests). Compressed HTTP responses and HTTPS downgrade
 redirects are rejected. Origin discovery adds at most 32 icons beyond the four well-known
 paths. Images exceeding four million pixels or decoder limits remain undecoded; PNG

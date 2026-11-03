@@ -21,15 +21,7 @@ vi.mock('node:net', async (original) => ({
   },
 }));
 vi.mock('node:dns/promises', () => ({
-  Resolver: class {
-    async resolve4() {
-      return ['127.0.0.1'];
-    }
-    async resolve6() {
-      return [];
-    }
-    cancel() {}
-  },
+  lookup: async () => [{ address: '127.0.0.1', family: 4 }],
 }));
 vi.mock('node:https', async (original) => {
   const https = await original<typeof import('node:https')>();
@@ -145,7 +137,8 @@ describe('real bounded sockets', () => {
       else {
         response.writeHead(200, { 'Content-Length': 20 });
         response.write('short');
-        response.socket?.destroy();
+        response.flushHeaders();
+        setTimeout(() => response.socket?.destroy(), 20);
       }
     });
     server.listen(0, '127.0.0.1');

@@ -1,4 +1,4 @@
-import { Resolver } from 'node:dns/promises';
+import { lookup } from 'node:dns/promises';
 import { get as httpGet } from 'node:http';
 import { get as httpsGet } from 'node:https';
 import { BlockList, isIP } from 'node:net';
@@ -74,28 +74,50 @@ interface ResponseBytes {
   location?: string;
 }
 
-async function resolveAddresses(hostname: string, signal: AbortSignal) {
+// OS lookups preserve /etc/hosts and split DNS. Active getaddrinfo calls cannot
+// be cancelled, so keep at most two outstanding even after callers time out.
+let activeLookups = 0;
+const lookupWaiters: {
+  signal: AbortSignal;
+  ready: () => void;
+  abort: () => void;
+}[] = [];
+function acquireLookup(signal: AbortSignal): Promise<void> {
   signal.throwIfAborted();
-  const resolver = new Resolver();
-  const cancel = () => resolver.cancel();
-  signal.addEventListener('abort', cancel, { once: true });
-  const absent = (error: NodeJS.ErrnoException): string[] => {
-    if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') return [];
-    throw error;
-  };
+  if (activeLookups < 2) {
+    activeLookups++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const waiter = {
+      signal,
+      ready: resolve,
+      abort: () => {
+        const index = lookupWaiters.indexOf(waiter);
+        if (index >= 0) lookupWaiters.splice(index, 1);
+        reject(signal.reason);
+      },
+    };
+    lookupWaiters.push(waiter);
+    signal.addEventListener('abort', waiter.abort, { once: true });
+  });
+}
+function releaseLookup() {
+  activeLookups--;
+  const waiter = lookupWaiters.shift();
+  if (waiter) {
+    waiter.signal.removeEventListener('abort', waiter.abort);
+    activeLookups++;
+    waiter.ready();
+  }
+}
+async function resolveAddresses(hostname: string, signal: AbortSignal) {
+  await acquireLookup(signal);
   try {
-    const [ipv4, ipv6] = await Promise.all([
-      resolver.resolve4(hostname).catch(absent),
-      resolver.resolve6(hostname).catch(absent),
-    ]);
     signal.throwIfAborted();
-    return [
-      ...ipv4.map((address) => ({ address, family: 4 })),
-      ...ipv6.map((address) => ({ address, family: 6 })),
-    ];
+    return await lookup(hostname, { all: true });
   } finally {
-    signal.removeEventListener('abort', cancel);
-    resolver.cancel();
+    releaseLookup();
   }
 }
 

@@ -30,8 +30,10 @@ redirect, then pins those vetted addresses into the socket lookup while preservi
 and TLS verification. Local/private, mapped/translated and special-use addresses are
 rejected. A single 10-second deadline covers DNS, redirects and streamed bodies; redirect
 chains stop at five hops and HTTPS redirects cannot downgrade to HTTP. Connections are
-not reused across DNS checks. DNS uses a cancellable per-fetch resolver, and body
-storage coalesces small chunks into bounded buffers. HTTP compression is not requested or accepted.
+not reused across DNS checks. System DNS (including hosts files/split DNS) has a global two-lookup ceiling;
+queued lookups are removed on timeout and late results cannot connect. Running OS
+lookups cannot be cancelled and retain their slot until complete. Body storage
+coalesces small chunks into bounded buffers. HTTP compression is not requested or accepted.
 
 Image bodies stop at 4 MiB, HTML/manifests at 2 MiB, and an origin contributes at most 32
 discovered icons in addition to four well-known paths. Relative links use the final

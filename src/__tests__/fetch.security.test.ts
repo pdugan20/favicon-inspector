@@ -1,19 +1,8 @@
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({
-  resolve4: vi.fn(),
-  resolve6: vi.fn(),
-  cancel: vi.fn(),
-  get: vi.fn(),
-}));
-vi.mock('node:dns/promises', () => ({
-  Resolver: class {
-    resolve4 = mocks.resolve4;
-    resolve6 = mocks.resolve6;
-    cancel = mocks.cancel;
-  },
-}));
+const mocks = vi.hoisted(() => ({ lookup: vi.fn(), get: vi.fn() }));
+vi.mock('node:dns/promises', () => ({ lookup: mocks.lookup }));
 vi.mock('node:http', () => ({ get: mocks.get }));
 vi.mock('node:https', () => ({ get: mocks.get }));
 import { fetchImage, fetchResource, isPublicAddress } from '../fetch.js';
@@ -42,9 +31,9 @@ function response(
   });
 }
 beforeEach(() => {
-  mocks.resolve4.mockReset().mockResolvedValue(['93.184.216.34']);
-  mocks.resolve6.mockReset().mockResolvedValue([]);
-  mocks.cancel.mockReset();
+  mocks.lookup
+    .mockReset()
+    .mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
   mocks.get.mockReset();
 });
 afterEach(() => {
@@ -87,7 +76,10 @@ describe('bounded public HTTP fetching', () => {
     expect(mocks.get).not.toHaveBeenCalled();
   });
   it('rejects mixed public/private DNS answers before opening a socket', async () => {
-    mocks.resolve4.mockResolvedValue(['93.184.216.34', '127.0.0.1']);
+    mocks.lookup.mockResolvedValue([
+      { address: '93.184.216.34', family: 4 },
+      { address: '127.0.0.1', family: 4 },
+    ]);
     expect((await fetchImage('https://example.com/icon')).error).toMatch(
       /public/
     );
@@ -105,7 +97,7 @@ describe('bounded public HTTP fetching', () => {
     expect(callback).toHaveBeenCalledWith(null, [
       { address: '93.184.216.34', family: 4 },
     ]);
-    expect(mocks.resolve4).toHaveBeenCalledTimes(1);
+    expect(mocks.lookup).toHaveBeenCalledTimes(1);
   });
   it('rejects a redirect to private services before a second connection', async () => {
     response(302, '', { location: 'http://127.0.0.1/admin' });
@@ -113,9 +105,9 @@ describe('bounded public HTTP fetching', () => {
     expect(mocks.get).toHaveBeenCalledTimes(1);
   });
   it('checks DNS again on redirects to a rebinding hostname', async () => {
-    mocks.resolve4
-      .mockResolvedValueOnce(['93.184.216.34'])
-      .mockResolvedValueOnce(['10.0.0.1']);
+    mocks.lookup
+      .mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }])
+      .mockResolvedValueOnce([{ address: '10.0.0.1', family: 4 }]);
     response(302, '', { location: '/next' });
     expect((await fetchImage('https://example.com/icon')).error).toMatch(
       /public/
@@ -149,11 +141,17 @@ describe('bounded public HTTP fetching', () => {
   });
   it('has a deadline even if DNS never completes', async () => {
     vi.useFakeTimers();
-    mocks.resolve4.mockReturnValue(new Promise(() => {}));
+    let complete!: (value: { address: string; family: number }[]) => void;
+    mocks.lookup.mockReturnValue(
+      new Promise((resolve) => {
+        complete = resolve;
+      })
+    );
     const result = fetchResource('https://example.com/', 10);
     await vi.advanceTimersByTimeAsync(11);
     expect((await result).error).toMatch(/deadline/);
-    expect(mocks.cancel).toHaveBeenCalled();
+    complete([]);
+    await vi.advanceTimersByTimeAsync(0);
     expect(mocks.get).not.toHaveBeenCalled();
   });
   it('keeps a stalled body under the same deadline', async () => {
@@ -205,7 +203,10 @@ describe('bounded public HTTP fetching', () => {
     expect(mocks.get).toHaveBeenCalledTimes(1);
   });
   it('retains all vetted families for socket fallback without resolving again', async () => {
-    mocks.resolve6.mockResolvedValue(['2606:4700:4700::1111']);
+    mocks.lookup.mockResolvedValue([
+      { address: '93.184.216.34', family: 4 },
+      { address: '2606:4700:4700::1111', family: 6 },
+    ]);
     response();
     await fetchImage('https://example.com/icon');
     const options = mocks.get.mock.calls[0][1];
@@ -218,5 +219,29 @@ describe('bounded public HTTP fetching', () => {
     const single = vi.fn();
     options.lookup('example.com', {}, single);
     expect(single).toHaveBeenCalledWith(null, '93.184.216.34', 4);
+  });
+  it('bounds outstanding system lookups even after many callers expire', async () => {
+    vi.useFakeTimers();
+    const pending: ((value: { address: string; family: number }[]) => void)[] =
+      [];
+    mocks.lookup.mockImplementation(
+      () => new Promise((resolve) => pending.push(resolve))
+    );
+    const results = Array.from({ length: 100 }, () =>
+      fetchResource('https://example.com/', 10)
+    );
+    await vi.advanceTimersByTimeAsync(11);
+    expect(
+      (await Promise.all(results)).every((result) => result.status === 0)
+    ).toBe(true);
+    expect(mocks.lookup).toHaveBeenCalledTimes(2);
+    pending.forEach((resolve) =>
+      resolve([{ address: '93.184.216.34', family: 4 }])
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.get).not.toHaveBeenCalled();
+    mocks.lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    response();
+    expect((await fetchResource('https://example.com/')).status).toBe(200);
   });
 });
